@@ -1,0 +1,27 @@
+test = (body<%>) {
+  body<%>.typeCheck(() { <!> })
+
+  expect = (result) {
+    toEqual = (comparison) {
+      if result != comparison : * error("\(result) did not equal \(comparison)") ;
+    }
+    * [toEqual:]
+  }
+  
+  expect.addToScopes()
+  
+  given body()<!> {
+    .error : log("the test failed") ;
+    .result : log ("the test passed") ;
+  }
+}
+
+test(() {
+  log("starting test")
+
+  result = if 3 * (1 + 1) == 6 { * "fantastic" } else { * "huh?" }
+
+  try expect(result).toEqual("fantastic")<!>
+
+  log("ending test")
+})
