@@ -2,7 +2,7 @@ const getTokenStream = characterStream => {
   /* prettier-ignore */
   const keywords = [
     "true", "false", "null", "if", "else", "given", "import", "watch", "async", "await", "unawait",
-    "try"
+    "try", "as"
   ]
   /* prettier-ignore */
   const symbols = [

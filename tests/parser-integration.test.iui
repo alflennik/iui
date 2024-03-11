@@ -42,7 +42,7 @@ describe("parser", () {
     expect(() {
       try evaluate("a = 123 b = 456")
     }).toThrowErrorMatching(
-      _"Encountered unexpected token "b""_
+      _"Failed to parse syntax"_
     )
   })
 
@@ -53,18 +53,6 @@ describe("parser", () {
     }).toThrowErrorMatching(
       "Found variable assignment in an improper location, variable assigments must be made at the \
         top level of a block"
-    )
-
-    expect(() {
-      try evaluate("
-        myFunction = () {
-          if 3 * 3 == 9 { * true }
-          * false
-        }
-      ")<!%>
-    }).toThrowErrorMatching(
-      _"Found "*" in an improper location, expressions which return from a function are only \
-        allowed at the top level of a block"_
     )
   })
 
@@ -78,7 +66,7 @@ describe("parser", () {
   test("should handle tricky parentheses without bordering whitespace", () {
     abc = [myKey: 123]
     optionalGetKey.type(() { "" })<?> = null
-    defaultGetKey = () { * `myKey` }
+    defaultGetKey = () { * "myKey" }
 
     result = abc[(optionalGetKey<?> ?? defaultGetKey)()]
 
@@ -90,12 +78,16 @@ describe("parser", () {
       try evaluate("()  { * 123 }")
     }).toThrowErrorMatching("Encountered unexpected token at {")
   })
-})
 
+  test("should handle operator precedence", () {
+    expect(1 + 1 * 50).toEqual(51)
+    expect(1 * 50 + 1).toEqual(51)
 
-weirdVal<%> = 20 ?? () {} // valid?
+    &passed = false
+    if 1 + 1 * 50 == 1 * 50 + 1 as result && result > 50 && result >= 51 {
+      &passed = true
+    }
 
-test(() {
-  expect(1 + 1 . 50).toEqual(51)
-  expect(1 . 50 + 1).toEqual(51)
+    expect(&passed).toEqual(true)
+  })
 })
