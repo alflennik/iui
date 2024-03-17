@@ -3,7 +3,7 @@ const { parseBlockSpecial, parseBlock } = require("./parseBlock")
 const { parseExpression } = require("./parseExpression")
 
 const parseGiven = () => {
-  skipTerm("given")
+  skipToken("given")
   const value = parseExpression()
   const { branches, defaultBranch } = parseBlockSpecial(() => {
     let branches = []
@@ -13,8 +13,8 @@ const parseGiven = () => {
         break
       }
       if (tokenStream.match([{ value: "else" }])) {
-        skipTerm("else")
-        defaultBranch = parseBlock()
+        skipToken("else")
+        defaultBranch = { block: parseBlock() }
       }
       const comparison = parseExpression()
       const block = parseBlock()

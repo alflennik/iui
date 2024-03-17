@@ -1,28 +1,28 @@
 const { parseBlock } = require("./parseBlock")
 const { parseObjectContents, parseDestructureContents } = require("./parseObject")
-const { skipTerm } = require("./skipTerm")
+const { skipToken } = require("./skipToken")
 
 const parseAwait = () => {}
 const parseUnawait = () => {}
 
 const parseFunction = () => {
-  skipTerm("(")
+  skipToken("(")
   const parameters = parseObjectContents()
-  skipTerm(")")
+  skipToken(")")
   const block = parseBlock()
   return { type: "function", isAsync: false, parameters, block }
 }
 
 const parseAsyncFunction = () => {
-  skipTerm("async")
+  skipToken("async")
   const parsedFunction = parseFunction()
   return { type: parsedFunction.type, isAsync: true, ...parsedFunction }
 }
 
 const parseCall = () => {
-  skipTerm("(")
+  skipToken("(")
   const arguments = parseDestructureContents()
-  skipTerm(")")
+  skipToken(")")
   return { type: "call", arguments }
 }
 

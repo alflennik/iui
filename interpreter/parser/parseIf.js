@@ -1,17 +1,17 @@
 const { tokenStream } = require("./parse")
 const { parseBlock } = require("./parseBlock")
 const { parseExpression } = require("./parseExpression")
-const { skipTerm } = require("./skipTerm")
+const { skipToken } = require("./skipToken")
 
 const parseIf = () => {
-  skipTerm("if")
+  skipToken("if")
   const condition = parseExpression()
   const block = parseBlock()
   const branches = [{ condition, block }]
   while (true) {
     if (tokenStream.match([{ value: "else" }, { value: "if" }])) {
-      skipTerm("else")
-      skipTerm("if")
+      skipToken("else")
+      skipToken("if")
       const condition = parseExpression()
       const block = parseBlock()
       branches.push({ condition, block })
@@ -21,7 +21,7 @@ const parseIf = () => {
   }
   let defaultBranch
   if (tokenStream.match([{ value: "else" }])) {
-    skipTerm("else")
+    skipToken("else")
     const block = parseBlock()
     defaultBranch = { block }
   }

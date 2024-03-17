@@ -1,9 +1,17 @@
-const { parseVariable } = require("./parseVariable")
-const { skipTerm } = require("./skipTerm")
+const { parseName } = require("./parseName")
+const { skipToken } = require("./skipToken")
 
-const parseSubscript = () => {
-  skipTerm(".")
-  return { type: "subscript", variable: parseVariable() }
+const parseSubscript = expression => {
+  skipToken(".")
+  const name = parseName()
+  return { type: "subscript", expression, name }
 }
 
-module.exports = { parseSubscript }
+const parseDynamicSubscript = expression => {
+  skipToken("[")
+  const nameExpression = parseExpression({ isStatement: false })
+  skipToken("]")
+  return { type: "dynamicSubscript", expression, nameExpression }
+}
+
+module.exports = { parseSubscript, parseDynamicSubscript }

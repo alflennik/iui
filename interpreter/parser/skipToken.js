@@ -1,10 +1,10 @@
 const { tokenStream, failedToParse } = require("./parse")
 
-const skipTerm = value => {
+const skipToken = value => {
   if (!tokenStream.matches([{ value }])) {
     failedToParse()
   }
   tokenStream.nextToken()
 }
 
-module.exports = { skipTerm }
+module.exports = { skipToken }

@@ -1,12 +1,10 @@
 const { parseExpression } = require("./parseExpression")
-const { parseVariable } = require("./parseVariable")
-const { skipTerm } = require("./skipTerm")
+const { skipToken } = require("./skipToken")
 
-const parseAssignment = () => {
-  const variable = parseVariable()
-  skipTerm("=")
+const parseAssignment = identifier => {
+  skipToken("=")
   const value = parseExpression({ isStatement: false })
-  return { type: "assignment", variable, value }
+  return { type: "assignment", identifier, value }
 }
 
 const parseTypedAssignment = () => {}

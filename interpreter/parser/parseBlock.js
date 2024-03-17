@@ -14,10 +14,10 @@ const parseBlockSpecial = parseContents => {
   let isCaptureBlock
   if (tokenStream.match({ value: "{" })) {
     isCaptureBlock = true
-    skipTerm("{")
+    skipToken("{")
   } else {
     isCaptureBlock = false
-    skipTerm(":")
+    skipToken(":")
   }
   const statements = parseContents()
   return { type: "block", isCaptureBlock, statements }
