@@ -11,7 +11,7 @@ const pick = (object, keys) => {
 const expect = input => {
   return {
     toEqual: output => {
-      if (input !== output)
+      if (JSON.stringify(input) !== JSON.stringify(output))
         throw new Error(`${JSON.stringify(input)} did not equal ${JSON.stringify(output)}`)
     },
   }

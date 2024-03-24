@@ -15,19 +15,16 @@ const getTokenizer = (code, filePath) => {
   const openBrackets = []
   const brackets = {}
 
+  // These two booleans are not meant to both be true at the same time, these values will alternate
+  // between true and false when handling nested strings like "apples {"bananas"}".
   let isString
   let isStringEscape
-  let isComment
 
   while (true) {
     const character = code[index]
     console.log(`${code.slice(0, index)}>${code.substr(index)}`)
 
     if (character === undefined) break
-
-    if (index > 85) {
-      console.log()
-    }
 
     const advanceCharacters = characterCount => {
       for (let i = 0; i < characterCount; i += 1) {
@@ -60,6 +57,7 @@ const getTokenizer = (code, filePath) => {
         peekCharacter = code[index + peek]
         if (peekCharacter === "_") {
           stringBracket += "_"
+          peek += 1
         } else if (peekCharacter === '"') {
           stringBracket += '"'
           return true
@@ -72,6 +70,7 @@ const getTokenizer = (code, filePath) => {
 
     if (isStringStart()) {
       isString = true
+      isStringEscape = false
       openBrackets.push({ bracket: stringBracket, line, column, index })
       tokens.push({ type: "term", value: stringBracket, line, column })
       advanceCharacters(stringBracket.length)
@@ -91,6 +90,7 @@ const getTokenizer = (code, filePath) => {
       while (true) {
         peekCharacter = code[index + peek]
         if (peekCharacter === "_") {
+          peek += 1
           stringEscapeBracket += "_"
         } else if (peekCharacter === "{") {
           stringEscapeBracket += "{"
@@ -109,7 +109,10 @@ const getTokenizer = (code, filePath) => {
       // When the tokenizer encounters a string escape it should actually handle this as two tokens,
       // one token is the string up to this point and the other is the open brace for the escape.
       const currentStringBracket = openBrackets.at(-1)
-      const string = code.slice(currentStringBracket.index, index)
+      const string = code.slice(
+        currentStringBracket.index + currentStringBracket.bracket.length,
+        index
+      )
       if (string.length) {
         tokens.push({
           type: "string",
@@ -151,7 +154,7 @@ const getTokenizer = (code, filePath) => {
       isStringEscape = false
       const openBracket = openBrackets.splice(-1, 1)[0]
       brackets[`${openBracket.line}:${openBracket.column}`] = `${line}:${column}`
-      tokens.push({ type: "term", value: stringBracket, line, column })
+      tokens.push({ type: "term", value: stringEscapeBracket, line, column })
       continue
     }
 
@@ -187,7 +190,10 @@ const getTokenizer = (code, filePath) => {
       const openBracket = openBrackets.splice(-1, 1)[0]
       brackets[`${openBracket.line}:${openBracket.column}`] = `${line}:${column}`
 
-      const currentString = code.slice(openBracket.index + openBracket.bracket.length, index)
+      const currentString = code.slice(
+        openBracket.index + openBracket.bracket.length,
+        index - stringBracket.length
+      )
       if (currentString.length) {
         tokens.push({ type: "string", value: currentString, line, column })
       }
@@ -196,13 +202,45 @@ const getTokenizer = (code, filePath) => {
       continue
     }
 
+    if (character === "=") {
+      tokens.push({ type: "term", value: "=", line, column })
+      advanceCharacters(1)
+      continue
+    }
+
+    if (!isString && character.match(/[a-z]/)) {
+      let word = character
+      let peek = 1
+      while (true) {
+        peekCharacter = code[index + peek]
+        if (peekCharacter.match(/[a-zA-Z0-9]/)) {
+          word += peekCharacter
+          peek += 1
+          continue
+        }
+        break
+      }
+      tokens.push({ type: "word", value: word, line, column })
+      advanceCharacters(word.length)
+      continue
+    }
+
     advanceCharacters(1)
   }
 
-  const matches = matchers => {}
-  const readToken = () => {}
+  console.log(tokens)
 
-  return { matches }
+  let tokenIndex = 0
+
+  const matches = matchers => {}
+
+  const readToken = () => {
+    const nextToken = tokens[tokenIndex]
+    tokenIndex += 1
+    return nextToken
+  }
+
+  return { matches, readToken }
 }
 
 module.exports = getTokenizer
