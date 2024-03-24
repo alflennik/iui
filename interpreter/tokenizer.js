@@ -1,93 +1,208 @@
-const getTokenStream = characterStream => {
-  /* prettier-ignore */
-  const keywords = [
-    "true", "false", "null", "if", "else", "given", "import", "watch", "async", "await", "unawait",
-    "try", "as"
-  ]
-  /* prettier-ignore */
-  const symbols = [
-    "[", "]", "{", "}", "(", ")", ":", ";", "<", ">", "+", "-", "=", "/", ".", "!", "?", "%", "*"
-  ]
+const getTokenizer = (code, filePath) => {
+  let index = 0
+  let line = 1
+  let column = 1
 
-  const isKeyword = word => keywords.includes(word)
-
-  const isDigitStart = character => character.match(/[0-9]/)
-  const isDigitBody = character => character.match(/[0-9,\.]/)
-  const isStringStart = character => character === '"'
-  const isStringBody = character => character !== '"'
-  const isStringEnd = isStringStart
-  const isDigitEnd = character => character.match(/[0-9]/)
-  const isIdentifierStart = character => character.match(/[&a-zA-Z]/)
-  const isIdentifierBody = character => character.match(/[a-zA-Z0-9]/)
-  const isSymbol = character => symbols.includes(character)
-  const isWhitespace = character => [" ", "\t", "\n"].includes(character)
-  // Need comments too
-
-  const readWhile = ({ start: startCondition, body: bodyCondition, end: endCondition }) => {
-    let token = ""
-    while (!characterStream.isEndOfFile()) {
-      const character = characterStream.peekCharacter()
-      const isFirstCharacter = token.length === 0
-      if ((isFirstCharacter && startCondition(character)) || bodyCondition(character)) {
-        token += characterStream.nextCharacter()
-      } else if (endCondition(character)) {
-        token += characterStream.nextCharacter()
-        break
-      } else {
-        break
-      }
+  const getSyntaxError = message => {
+    if (filePath) {
+      throw new Error(`${message} at ${filePath}:${line}:${column}`)
+    } else {
+      throw new Error(`${message} at ${line}:${column}`)
     }
-    return token
   }
 
-  const readWhitespace = () => {
-    const token = readWhile({ start: isWhitespace, body: isWhitespace, end: isWhitespace })
-    return { type: "whitespace", token }
-  }
+  const tokens = []
+  const openBrackets = []
+  const brackets = {}
 
-  const readString = () => {
-    const token = readWhile({ start: isStringStart, body: isStringBody, end: isStringEnd })
-    return { type: "string", token }
-  }
+  let isString
+  let isStringEscape
+  let isComment
 
-  const readNumber = () => {
-    const token = readWhile({ start: isDigitStart, body: isDigitBody, end: isDigitEnd })
-    return { type: "number", token }
-  }
+  while (true) {
+    const character = code[index]
+    console.log(`${code.slice(0, index)}>${code.substr(index)}`)
 
-  const readSymbol = () => {
-    const token = readWhile({ start: isSymbol, body: isSymbol, end: isSymbol })
-    return { type: "symbol", token }
-  }
+    if (character === undefined) break
 
-  const readIdentifier = () => {
-    const token = readWhile({
-      start: isIdentifierStart,
-      body: isIdentifierBody,
-      end: isIdentifierBody,
-    })
-
-    return isKeyword(token) ? { type: "keyword", token } : { type: "declaration", token }
-  }
-
-  const nextToken = () => {
-    if (characterStream.isEndOfFile()) return null
-
-    const character = characterStream.peekCharacter()
-    if (!character) {
+    if (index > 85) {
       console.log()
     }
 
-    if (isWhitespace(character)) return readWhitespace()
-    if (isDigitStart(character)) return readNumber()
-    if (isStringStart(character)) return readString()
-    if (isIdentifierStart(character)) return readIdentifier()
-    if (isSymbol(character)) return readSymbol()
+    const advanceCharacters = characterCount => {
+      for (let i = 0; i < characterCount; i += 1) {
+        index += 1
 
-    characterStream.fail(`Failed to read token at character "${character}"`)
+        if (character === "\n") {
+          line += 1
+          column = 1
+        } else {
+          column += 1
+        }
+      }
+    }
+
+    // Strings can be formatted like "" but also, to escape characters within, they can be like
+    // _"He said, "Yo.""_, which allows quotes within the string. There is even
+    // __"You can double escape and include _""_ in there."__ with as many underscores as desired.
+    let stringBracket
+
+    const isStringStart = () => {
+      stringBracket = undefined
+      if (isString || !(character === '"' || character === "_")) return false
+      if (character === '"') {
+        stringBracket = '"'
+        return true
+      }
+      stringBracket = "_"
+      let peek = 1
+      while (true) {
+        peekCharacter = code[index + peek]
+        if (peekCharacter === "_") {
+          stringBracket += "_"
+        } else if (peekCharacter === '"') {
+          stringBracket += '"'
+          return true
+        } else {
+          stringBracket = undefined
+          return false
+        }
+      }
+    }
+
+    if (isStringStart()) {
+      isString = true
+      openBrackets.push({ bracket: stringBracket, line, column, index })
+      tokens.push({ type: "term", value: stringBracket, line, column })
+      advanceCharacters(stringBracket.length)
+      continue
+    }
+
+    let stringEscapeBracket
+    const isStringEscapeStart = () => {
+      stringEscapeBracket = undefined
+      if (isStringEscape || !(character === "{" || character === "_")) return false
+      if (character === "{") {
+        stringEscapeBracket = "{"
+        return true
+      }
+      stringEscapeBracket = "_"
+      let peek = 1
+      while (true) {
+        peekCharacter = code[index + peek]
+        if (peekCharacter === "_") {
+          stringEscapeBracket += "_"
+        } else if (peekCharacter === "{") {
+          stringEscapeBracket += "{"
+          return true
+        } else {
+          stringEscapeBracket = undefined
+          return false
+        }
+      }
+    }
+
+    if (isStringEscapeStart()) {
+      isString = false
+      isStringEscape = true
+
+      // When the tokenizer encounters a string escape it should actually handle this as two tokens,
+      // one token is the string up to this point and the other is the open brace for the escape.
+      const currentStringBracket = openBrackets.at(-1)
+      const string = code.slice(currentStringBracket.index, index)
+      if (string.length) {
+        tokens.push({
+          type: "string",
+          value: string,
+          line: currentStringBracket.line,
+          column: currentStringBracket.column,
+        })
+      }
+
+      tokens.push({ type: "term", value: stringEscapeBracket, line, column })
+      openBrackets.push({ bracket: stringEscapeBracket, line, column, index })
+      advanceCharacters(stringEscapeBracket.length)
+      continue
+    }
+
+    const isStringEscapeEnd = () => {
+      stringEscapeBracket = undefined
+      if (!isStringEscape) return false
+      const openingBracket = openBrackets.at(-1).bracket // Something like { or __{
+      const closingBracket = `}${openingBracket.slice(0, -1)}`
+      const peekAhead = code.slice(index, index + closingBracket.length)
+      const peekAhead1More = code.slice(
+        index + closingBracket.length,
+        index + closingBracket.length + 1
+      )
+      if (peekAhead === closingBracket) {
+        if (peekAhead1More === "_") {
+          throw getSyntaxError('Unexpected token "_"')
+        }
+        stringEscapeBracket = closingBracket
+        return true
+      }
+      return false
+    }
+
+    if (isStringEscapeEnd()) {
+      advanceCharacters(stringEscapeBracket.length)
+      isString = true
+      isStringEscape = false
+      const openBracket = openBrackets.splice(-1, 1)[0]
+      brackets[`${openBracket.line}:${openBracket.column}`] = `${line}:${column}`
+      tokens.push({ type: "term", value: stringBracket, line, column })
+      continue
+    }
+
+    const isStringEnd = () => {
+      stringBracket = undefined
+      if (!isString || isStringEscape) return false
+      const openingBracket = openBrackets.at(-1).bracket // Something like " or __"
+      const closingBracket = `"${openingBracket.slice(0, -1)}`
+      const peekAhead = code.slice(index, index + closingBracket.length)
+      const peekAhead1More = code.slice(
+        index + closingBracket.length,
+        index + closingBracket.length + 1
+      )
+      if (peekAhead === closingBracket) {
+        if (peekAhead1More === "_") {
+          throw getSyntaxError('Unexpected token "_"')
+        } else if (peekAhead1More === "{") {
+          // Consider the fairly reasonable sentence, `She said, "hello."` If there is a greeting
+          // variable, it turns into _"She said, "_{greeting}_""_. But the issue is the "_ which
+          // appears part of the way through the string. Do you see that? So when a "_ is seen we
+          // still need to check for { to resolve the ambiguity.
+          return false
+        }
+        stringBracket = closingBracket
+        return true
+      }
+      return false
+    }
+
+    if (isStringEnd()) {
+      advanceCharacters(stringBracket.length)
+      isString = false
+      const openBracket = openBrackets.splice(-1, 1)[0]
+      brackets[`${openBracket.line}:${openBracket.column}`] = `${line}:${column}`
+
+      const currentString = code.slice(openBracket.index + openBracket.bracket.length, index)
+      if (currentString.length) {
+        tokens.push({ type: "string", value: currentString, line, column })
+      }
+
+      tokens.push({ type: "term", value: stringBracket, line, column })
+      continue
+    }
+
+    advanceCharacters(1)
   }
 
-  return { nextToken }
+  const matches = matchers => {}
+  const readToken = () => {}
+
+  return { matches }
 }
 
-module.exports = getTokenStream
+module.exports = getTokenizer
