@@ -1,4 +1,5 @@
 const getTokenizer = (code, filePath) => {
+  let character = code[0]
   let index = 0
   let line = 1
   let column = 1
@@ -15,16 +16,35 @@ const getTokenizer = (code, filePath) => {
   const openBrackets = []
   const brackets = {}
 
-  // These two booleans are not meant to both be true at the same time, these values will alternate
-  // between true and false when handling nested strings like "apples {"bananas"}".
-  let isString
-  let isStringEscape
-
   while (true) {
-    const character = code[index]
-    console.log(`${code.slice(0, index)}>${code.substr(index)}`)
-
     if (character === undefined) break
+
+    let fiftyBefore = index - 50 > 0 ? index - 50 : 0
+    console.log(code.slice(fiftyBefore, index) + ">" + code.slice(index, index + 100))
+    if (index >= 599) {
+      console.log()
+    }
+
+    let isString
+    let isStringSubstitution
+    let currentStringUnderscores
+
+    const refreshValues = () => {
+      isString = !!(openBrackets.at(-1) && openBrackets.at(-1).bracket.endsWith('"'))
+      isStringSubstitution = !!(
+        openBrackets.at(-2) &&
+        openBrackets.at(-2).bracket.endsWith('"') &&
+        openBrackets.at(-1).bracket.endsWith("{")
+      )
+      currentStringUnderscores =
+        isString || isStringSubstitution
+          ? Array.from(openBrackets.at(-1).bracket)
+              .filter(char => char === "_")
+              .join("")
+          : ""
+    }
+
+    refreshValues()
 
     const advanceCharacters = characterCount => {
       for (let i = 0; i < characterCount; i += 1) {
@@ -37,102 +57,76 @@ const getTokenizer = (code, filePath) => {
           column += 1
         }
       }
+      character = code[index]
+      refreshValues()
     }
 
-    // Strings can be formatted like "" but also, to escape characters within, they can be like
-    // _"He said, "Yo.""_, which allows quotes within the string. There is even
-    // __"You can double escape and include _""_ in there."__ with as many underscores as desired.
     let stringBracket
 
     const isStringStart = () => {
+      /* 
+      Can be:
+        "example string"
+        _"example string"_
+        __"example string"__
+        \n"example string"
+        \s"example string"
+        _\n"example string"_
+        __\s"example string"__
+        \_\s"example string"_
+        \__\s"example string"__
+      */
+
       stringBracket = undefined
-      if (isString || !(character === '"' || character === "_")) return false
+      const validFirstCharacter = ['"', "_", "\\"]
+      const validSecondaryCharacter = ['"', "_", "\\", "n", "s"]
+
+      if (isString || !validFirstCharacter.includes(character)) return false
       if (character === '"') {
         stringBracket = '"'
         return true
       }
-      stringBracket = "_"
+      stringBracket = character
       let peek = 1
       while (true) {
         peekCharacter = code[index + peek]
-        if (peekCharacter === "_") {
-          stringBracket += "_"
-          peek += 1
-        } else if (peekCharacter === '"') {
+
+        if (peekCharacter === '"') {
           stringBracket += '"'
-          return true
-        } else {
+          if (isStringStartBracket(stringBracket)) return true
           stringBracket = undefined
           return false
         }
+
+        if (validSecondaryCharacter.includes(peekCharacter)) {
+          peek += 1
+          stringBracket += peekCharacter
+          continue
+        }
+
+        stringBracket = undefined
+        return false
       }
     }
 
-    if (isStringStart()) {
-      isString = true
-      isStringEscape = false
-      openBrackets.push({ bracket: stringBracket, line, column, index })
-      tokens.push({ type: "term", value: stringBracket, line, column })
-      advanceCharacters(stringBracket.length)
-      continue
-    }
+    let stringSubstitutionBracket
 
-    let stringEscapeBracket
-    const isStringEscapeStart = () => {
-      stringEscapeBracket = undefined
-      if (isStringEscape || !(character === "{" || character === "_")) return false
-      if (character === "{") {
-        stringEscapeBracket = "{"
+    const isStringSubstitutionStart = () => {
+      stringSubstitutionBracket = undefined
+      if (!isString) return
+      const openSubstitutionBracket = `${currentStringUnderscores}{`
+      const peekAhead = code.slice(index, index + openSubstitutionBracket.length)
+      if (peekAhead === openSubstitutionBracket) {
+        stringSubstitutionBracket = openSubstitutionBracket
         return true
       }
-      stringEscapeBracket = "_"
-      let peek = 1
-      while (true) {
-        peekCharacter = code[index + peek]
-        if (peekCharacter === "_") {
-          peek += 1
-          stringEscapeBracket += "_"
-        } else if (peekCharacter === "{") {
-          stringEscapeBracket += "{"
-          return true
-        } else {
-          stringEscapeBracket = undefined
-          return false
-        }
-      }
+      return false
     }
 
-    if (isStringEscapeStart()) {
-      isString = false
-      isStringEscape = true
-
-      // When the tokenizer encounters a string escape it should actually handle this as two tokens,
-      // one token is the string up to this point and the other is the open brace for the escape.
-      const currentStringBracket = openBrackets.at(-1)
-      const string = code.slice(
-        currentStringBracket.index + currentStringBracket.bracket.length,
-        index
-      )
-      if (string.length) {
-        tokens.push({
-          type: "string",
-          value: string,
-          line: currentStringBracket.line,
-          column: currentStringBracket.column,
-        })
-      }
-
-      tokens.push({ type: "term", value: stringEscapeBracket, line, column })
-      openBrackets.push({ bracket: stringEscapeBracket, line, column, index })
-      advanceCharacters(stringEscapeBracket.length)
-      continue
-    }
-
-    const isStringEscapeEnd = () => {
-      stringEscapeBracket = undefined
-      if (!isStringEscape) return false
-      const openingBracket = openBrackets.at(-1).bracket // Something like { or __{
-      const closingBracket = `}${openingBracket.slice(0, -1)}`
+    const isStringSubstitutionEnd = () => {
+      stringSubstitutionBracket = undefined
+      if (!isStringSubstitution) return false
+      const closingBracket = `}${currentStringUnderscores}`
       const peekAhead = code.slice(index, index + closingBracket.length)
       const peekAhead1More = code.slice(
         index + closingBracket.length,
@@ -142,27 +136,16 @@ const getTokenizer = (code, filePath) => {
         if (peekAhead1More === "_") {
           throw getSyntaxError('Unexpected token "_"')
         }
-        stringEscapeBracket = closingBracket
+        stringSubstitutionBracket = closingBracket
         return true
       }
       return false
     }
 
-    if (isStringEscapeEnd()) {
-      advanceCharacters(stringEscapeBracket.length)
-      isString = true
-      isStringEscape = false
-      const openBracket = openBrackets.splice(-1, 1)[0]
-      brackets[`${openBracket.line}:${openBracket.column}`] = `${line}:${column}`
-      tokens.push({ type: "term", value: stringEscapeBracket, line, column })
-      continue
-    }
-
     const isStringEnd = () => {
       stringBracket = undefined
-      if (!isString || isStringEscape) return false
-      const openingBracket = openBrackets.at(-1).bracket // Something like " or __"
-      const closingBracket = `"${openingBracket.slice(0, -1)}`
+      if (!isString || isStringSubstitution) return false
+      const closingBracket = `"${currentStringUnderscores}`
       const peekAhead = code.slice(index, index + closingBracket.length)
       const peekAhead1More = code.slice(
         index + closingBracket.length,
@@ -184,21 +167,53 @@ const getTokenizer = (code, filePath) => {
       return false
     }
 
-    if (isStringEnd()) {
+    if (isStringStart()) {
+      openBrackets.push({ bracket: stringBracket, line, column, index })
+      tokens.push({ type: "term", value: stringBracket, line, column })
       advanceCharacters(stringBracket.length)
-      isString = false
+      continue
+    }
+
+    if (isStringSubstitutionStart()) {
+      tokens.push({ type: "term", value: stringSubstitutionBracket, line, column })
+      openBrackets.push({ bracket: stringSubstitutionBracket, line, column, index })
+      advanceCharacters(stringSubstitutionBracket.length)
+      continue
+    }
+
+    if (isStringSubstitutionEnd()) {
+      advanceCharacters(stringSubstitutionBracket.length)
       const openBracket = openBrackets.splice(-1, 1)[0]
       brackets[`${openBracket.line}:${openBracket.column}`] = `${line}:${column}`
+      tokens.push({ type: "term", value: stringSubstitutionBracket, line, column })
+      continue
+    }
 
-      const currentString = code.slice(
-        openBracket.index + openBracket.bracket.length,
-        index - stringBracket.length
-      )
-      if (currentString.length) {
-        tokens.push({ type: "string", value: currentString, line, column })
-      }
-
+    if (isStringEnd()) {
+      advanceCharacters(stringBracket.length)
+      const openBracket = openBrackets.splice(-1, 1)[0]
+      brackets[`${openBracket.line}:${openBracket.column}`] = `${line}:${column}`
       tokens.push({ type: "term", value: stringBracket, line, column })
+      continue
+    }
+
+    if (isString) {
+      let startingLine = line
+      let startingColumn = column
+      let value = ""
+      let isEscapedCharacter
+      while (true) {
+        if (isEscapedCharacter) {
+          isEscapedCharacter = false
+        } else {
+          if (isStringSubstitutionStart() || isStringEnd()) break
+          if (character === "\\") isEscapedCharacter = true
+        }
+
+        value += character
+        advanceCharacters(1)
+      }
+      tokens.push({ type: "string", value, line: startingLine, column: startingColumn })
       continue
     }
 
@@ -243,4 +258,12 @@ const getTokenizer = (code, filePath) => {
   return { matches, readToken }
 }
 
-module.exports = getTokenizer
+const isStringStartBracket = bracket => {
+  // Can start with an optional \
+  // Then any number of _
+  // Then optionally \n or \s
+  // Must end with "
+  return !!bracket.match(/^(\\?_+|_*)(\\s|\\n|)"$/)
+}
+
+module.exports = { getTokenizer, isStringStartBracket }
