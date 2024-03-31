@@ -1,23 +1,26 @@
-const getTokenizer = (code, filePath) => {
+const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
   let character = code[0]
   let index = 0
-  let line = 1
+  let line = startingLineNumber
   let column = 1
 
-  const getSyntaxError = message => {
+  const errors = []
+
+  const getSyntaxError = (message, { line: errorLine, column: errorColumn } = { line, column }) => {
     if (filePath) {
-      throw new Error(`${message} at ${filePath}:${line}:${column}`)
+      return `${message}\n  at ${filePath}:${errorLine}:${errorColumn}`
     } else {
-      throw new Error(`${message} at ${line}:${column}`)
+      return `${message}\n  at ${errorLine}:${errorColumn}`
     }
   }
 
   const tokens = []
   const openBrackets = []
   const brackets = {}
+  let shouldBreak = false
 
   while (true) {
-    if (character === undefined) break
+    if (shouldBreak) break
 
     let fiftyBefore = index - 50 > 0 ? index - 50 : 0
     console.log(code.slice(fiftyBefore, index) + ">" + code.slice(index, index + 100))
@@ -46,6 +49,7 @@ const getTokenizer = (code, filePath) => {
 
     refreshValues()
 
+    // After calling advanceCharacters remember to check shouldBreak
     const advanceCharacters = characterCount => {
       for (let i = 0; i < characterCount; i += 1) {
         index += 1
@@ -58,6 +62,9 @@ const getTokenizer = (code, filePath) => {
         }
       }
       character = code[index]
+
+      if (character === undefined) shouldBreak = true
+
       refreshValues()
     }
 
@@ -128,14 +135,7 @@ const getTokenizer = (code, filePath) => {
       if (!isStringSubstitution) return false
       const closingBracket = `}${currentStringUnderscores}`
       const peekAhead = code.slice(index, index + closingBracket.length)
-      const peekAhead1More = code.slice(
-        index + closingBracket.length,
-        index + closingBracket.length + 1
-      )
       if (peekAhead === closingBracket) {
-        if (peekAhead1More === "_") {
-          throw getSyntaxError('Unexpected token "_"')
-        }
         stringSubstitutionBracket = closingBracket
         return true
       }
@@ -153,7 +153,13 @@ const getTokenizer = (code, filePath) => {
       )
       if (peekAhead === closingBracket) {
         if (peekAhead1More === "_") {
-          throw getSyntaxError('Unexpected token "_"')
+          errors.push(
+            getSyntaxError(
+              `String should be closed with \`${closingBracket}\` but found an extra \`_\``,
+              { line, column: column + closingBracket.length }
+            )
+          )
+          shouldBreak = true
         } else if (peekAhead1More === "{") {
           // Consider the fairly reasonable sentence, `She said, "hello."` If there is a greeting
           // variable, it turns into _"She said, "_{greeting}_""_. But the issue is the "_ which
@@ -203,6 +209,8 @@ const getTokenizer = (code, filePath) => {
       let value = ""
       let isEscapedCharacter
       while (true) {
+        if (shouldBreak) break
+
         if (isEscapedCharacter) {
           isEscapedCharacter = false
         } else {
@@ -243,7 +251,42 @@ const getTokenizer = (code, filePath) => {
     advanceCharacters(1)
   }
 
-  console.log(tokens)
+  if (errors.length) return { errors }
+
+  openBrackets.forEach((openBracket, index) => {
+    if (openBracket.bracket.endsWith('"')) {
+      errors.push(
+        getSyntaxError(`Found open string \`${openBracket.bracket}\` which was not closed`, {
+          line: openBracket.line,
+          column: openBracket.column,
+        })
+      )
+      return
+    }
+
+    const isInString = openBrackets[index - 1]?.bracket.endsWith('"')
+    if (isInString && openBracket.bracket.endsWith("{")) {
+      errors.push(
+        getSyntaxError(
+          `Found open string substitution "${openBracket.bracket}" which was not closed`,
+          {
+            line: openBracket.line,
+            column: openBracket.column,
+          }
+        )
+      )
+      return
+    }
+
+    throw new Error("open bracket error not yet implemented")
+  })
+
+  console.log(openBrackets)
+  console.log()
+
+  if (errors.length) return { errors }
+
+  // console.log(tokens)
 
   let tokenIndex = 0
 
