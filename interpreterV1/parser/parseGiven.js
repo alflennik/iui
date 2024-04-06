@@ -6,6 +6,7 @@ const parseGiven = () => {
   skipToken("given")
   const value = parseExpression()
   const { branches, defaultBranch } = parseBlockSpecial(() => {
+    let defaultBranch
     let branches = []
 
     while (true) {

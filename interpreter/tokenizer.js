@@ -22,11 +22,11 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
   while (true) {
     if (shouldBreak) break
 
-    let fiftyBefore = index - 50 > 0 ? index - 50 : 0
-    console.log(code.slice(fiftyBefore, index) + ">" + code.slice(index, index + 100))
-    if (index >= 599) {
-      console.log()
-    }
+    // let fiftyBefore = index - 50 > 0 ? index - 50 : 0
+    // console.log(code.slice(fiftyBefore, index) + ">" + code.slice(index, index + 100))
+    // if (index >= 599) {
+    //   console.log()
+    // }
 
     let isString
     let isStringSubstitution

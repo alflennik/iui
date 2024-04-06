@@ -4,6 +4,8 @@ const unaryOperators = {
   "-": { precendence: 99 /* TODO */ },
   "!": { precendence: 99 /* TODO */ },
   await: { precendence: 99 /* TODO */ },
+  unawait: { precendence: 99 /* TODO */ },
+  awaitIfAsync: { precendence: 99 /* TODO */ },
   "...": { precendence: 99 /* TODO */ },
 }
 

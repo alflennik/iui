@@ -18,7 +18,7 @@ const parseStatement = () => {
     return parseTypedAssignment(tokenStream)
   }
 
-  return parseExpression(tokenStream, { isStatement: true })
+  return parseExpression({ isStatement: true })
 }
 
 module.exports = { parseStatement }
