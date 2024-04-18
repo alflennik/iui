@@ -1,15 +1,5 @@
 const { tokenStream } = require("./parse")
 
-// const operatorsByPrecedence = [{ value: "=", operatorType: "binary" }]
-
-// const binaryOperators = operatorsByPrecedence
-//   .filter(({ operatorType }) => operatorType === "binary")
-//   .map(operatorByPrecedence => operatorByPrecedence.value)
-
-// const unaryOperators = Object.entries(operatorsByPrecedence)
-//   .filter(({ operatorType }) => operatorType === "unary")
-//   .map(operatorByPrecedence => operatorByPrecedence.value)
-
 const parseExpression = () => {
   // Parsing the various parts of an expression need to happen in the right order, that is,
   // operator precedence needs to be considered. It's not just that 1 + 5 * 10 equals 51, due to
@@ -22,99 +12,88 @@ const parseExpression = () => {
   // Will be transformed in place into AST nodes.
   const operatorsOrNodes = []
 
-  const tokenMatchesUnaryOperator = () => {
-    tokenStream.matches([{ value: value => unaryOperators.includes(value) }])
-  }
-
-  const tokenMatchesBinaryOperator = () => {
-    tokenStream.matches([{ value: value => binaryOperators.includes(value) }])
-  }
-
-  const tokenMatchesCall = () => tokenStream.matches([{ value: "(", hasLeftBoundary: false }])
-
-  const tokenMatchesIf = () => tokenStream.matches([{ value: "if" }])
-
-  const tokenMatchesString = () => tokenStream.matches([{ value: value => value.endsWith('"') }])
-
-  const parseExpressionStart = () => {
-    if (tokenMatchesUnaryOperator()) {
-      const token = tokenStream.nextToken()
-      const { operatorPrecedence } = token
-      tokensOrNodes.push({ token, operatorPrecedence, operatorType: "unary" })
-      parseExpressionStart()
-    }
-
-    if (tokenMatchesIf()) {
-      tokensOrNodes.push({ node: parseIf() })
-    }
-
-    if (tokenMatchesString()) {
-      tokensOrNodes.push({ node: parseString() })
-    }
-
-    if (tokenStream.matches([{ type: "word" }])) {
-      tokensOrNodes.push({ node: parseWord() })
-    }
-
-    // if (tokenStream.matches([{ type: "number" }])) {
-    //   tokensOrNodes.push({ token: tokenStream.nextToken() })
+  const pushExpressionStart = () => {
+    // if (tokenMatchesUnaryOperator()) {
+    //   const token = tokenStream.nextToken()
+    //   const { operatorPrecedence } = token
+    //   tokensOrNodes.push({ token, operatorPrecedence, operatorType: "unary" })
+    //   parseExpressionStart()
     // }
+
+    // if (tokenMatchesIf()) {
+    //   tokensOrNodes.push({ node: parseIf() })
+    // }
+
+    if (tokenStream.matches([{ type: "name" }])) {
+      operatorsOrNodes.push(parseName())
+    }
+
+    if (tokenStream.matches([{ value: value => value.endsWith('"') }])) {
+      operatorsOrNodes.push(parseString())
+    }
   }
 
-  parseExpressionStart()
+  pushExpressionStart()
 
   while (true) {
-    if (tokenMatchesCall()) {
-      tokensOrNodes.push({ node: parseCall() })
-      continue
-    }
+    // if (tokenStream.matches([{ value: "(", hasBoundaryLeft: false }])) {
+    // parse arguments in the parentheses, but leave precedence unprocessed
+    // }
 
-    if (tokenMatchesBinaryOperator()) {
-      const nextToken = tokenStream.nextToken()
-      const { operatorPrecedence, operatorType } = nextToken
-      tokensOrNodes.push({ token: nextToken, operatorPrecedence, operatorType })
-      parseExpressionStart()
-      continue
+    if (tokenStream.matches([{ value: "=" }])) {
+      skipToken("=")
+      operatorsOrNodes.push({ operator: "assignment", precedence: "binaryLowest" })
+      pushExpressionStart()
     }
 
     break
   }
 
-  let precedences = []
-  tokensOrNodes.forEach(tokenOrNode => {
-    const precedence = tokenOrNode.token?.operatorPrecedence
-    if (precedence && !precedences.includes(precedence)) {
-      precedences.push(precedence)
+  // Would apply in a scenario like this where two otherwise valid expressions are placed on the
+  // same line:
+  // &index = 0 index = >< &index
+  if (!tokenStream.matches([{ hasNewlineLeft: true }])) {
+    const peekToken = tokenStream.peekToken()
+    return {
+      errors: [
+        {
+          message: "Missing line break after end of expression",
+          line: peekToken.line,
+          column: peekToken.column,
+        },
+      ],
     }
-  })
-  precedences.sort((a, b) => b - a)
+  }
+
+  let precedences = ["binaryLowest"]
 
   precedences.forEach(precedence => {
     let index = 0
     while (true) {
-      if (tokensOrNodes[index].token?.operatorPrecedence === precedence) {
-        const { operatorType } = tokensOrNodes[index].token
-        if (operatorType === "binary") {
-          const node = parseBinaryOperator(tokensOrNodes.slice(index - 1, index + 1))
-          tokensOrNodes.splice(index - 1, 3, node)
-          // index intended to stay the same
-          continue
-        }
+      const current = operatorsOrNodes[index]
 
-        if (operatorType === "unary") {
-          const node = parseUnaryOperator(tokensOrNodes.slice(index, index + 1))
-          tokensOrNodes.splice(index, 2, node)
-          // index intended to stay the same
-          continue
-        }
+      if (!current) break
+
+      if (current.precedence !== precedence) {
+        index += 1
+        continue
       }
 
-      index += 1
-      if (index >= tokensOrNodes.length) break
+      if (["assignment"].includes(operatorsOrNodes[index].operator)) {
+        const previous = operatorsOrNodes[index - 1]
+        const next = operatorsOrNodes[index + 1]
+        const node = { type: "assignment", left: previous, right: next }
+        operatorsOrNodes.splice(index - 1, 3, node)
+        // Because of splice the index can just stay the same for the next iteration
+      }
     }
   })
 
-  const nodesOnly = tokensOrNodes.map(tokensOrNodes => tokensOrNodes.node)
+  if (operatorsOrNodes.length !== 1) {
+    throw new Error("Is this even possible?")
+  }
+
+  return operatorsOrNodes[0]
 }
 
 module.exports = { parseExpression }

@@ -1,5 +1,5 @@
 const { test, expect } = require("../../test")
-const { getTokenizer, isStringStartBracket } = require("../tokenizer")
+const { getTokenizer, isStringStartBracket } = require("../tokenizer/tokenizer")
 
 const pick = (object, keys) => {
   const newObject = {}
