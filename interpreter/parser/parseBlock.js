@@ -1,4 +1,4 @@
-// const { tokenStream } = require("./parse")
+// const { tokenizer } = require("./parse")
 const { parseStatement } = require("./parseStatement")
 
 const parseBlockContents = () => {
@@ -12,7 +12,7 @@ const parseBlockContents = () => {
 
 // const parseBlockSpecial = parseContents => {
 //   let isCaptureBlock
-//   if (tokenStream.match({ value: "{" })) {
+//   if (tokenizer.match({ value: "{" })) {
 //     isCaptureBlock = true
 //     skipToken("{")
 //   } else {

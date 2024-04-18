@@ -1,18 +1,7 @@
 const { test, expect } = require("../../test")
 const { getTokenizer, isStringStartBracket } = require("../tokenizer/tokenizer")
-
-const pick = (object, keys) => {
-  const newObject = {}
-  keys.forEach(key => {
-    newObject[key] = object[key]
-  })
-  return newObject
-}
-
-const getCurrentLineNumber = () => {
-  const error = new Error()
-  return Number(error.stack.match(/:\d+:\d+/g)[1].match(/:(\d+)/)[1])
-}
+const getCurrentLineNumber = require("../utilities/getCurrentLineNumber")
+const pick = require("../utilities/pick")
 
 test("isValidStringBracket can validate correct brackets", () => {
   const validBrackets = [
@@ -48,6 +37,7 @@ test("isValidStringBracket can validate correct brackets", () => {
 })
 
 test("tokenizer can read strings", () => {
+  const codeLineStart = getCurrentLineNumber() + 1
   const code = String.raw`
     a = "hello"
     b = _"He said, "Yo.""_
@@ -106,47 +96,47 @@ Tasks for today:
 "__
     `
 
-  const tokenizer = getTokenizer(code)
+  const tokenizer = getTokenizer(code, { filePath: __filename, startingLineNumber: codeLineStart })
 
   const readToken = () => pick(tokenizer.readToken(), ["type", "value"])
 
   // a = "hello"
-  expect(readToken()).toEqual({ type: "word", value: "a" })
+  expect(readToken()).toEqual({ type: "name", value: "a" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '"' })
   expect(readToken()).toEqual({ type: "string", value: "hello" })
   expect(readToken()).toEqual({ type: "term", value: '"' })
 
   // b = _"He said, "Yo.""_
-  expect(readToken()).toEqual({ type: "word", value: "b" })
+  expect(readToken()).toEqual({ type: "name", value: "b" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '_"' })
   expect(readToken()).toEqual({ type: "string", value: 'He said, "Yo."' })
   expect(readToken()).toEqual({ type: "term", value: '"_' })
 
   // c = "He said {a}"
-  expect(readToken()).toEqual({ type: "word", value: "c" })
+  expect(readToken()).toEqual({ type: "name", value: "c" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '"' })
   expect(readToken()).toEqual({ type: "string", value: "He said " })
   expect(readToken()).toEqual({ type: "term", value: "{" })
-  expect(readToken()).toEqual({ type: "word", value: "a" })
+  expect(readToken()).toEqual({ type: "name", value: "a" })
   expect(readToken()).toEqual({ type: "term", value: "}" })
   expect(readToken()).toEqual({ type: "term", value: '"' })
 
   // d = _"He said, "_{a}_.""_
-  expect(readToken()).toEqual({ type: "word", value: "d" })
+  expect(readToken()).toEqual({ type: "name", value: "d" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '_"' })
   expect(readToken()).toEqual({ type: "string", value: 'He said, "' })
   expect(readToken()).toEqual({ type: "term", value: "_{" })
-  expect(readToken()).toEqual({ type: "word", value: "a" })
+  expect(readToken()).toEqual({ type: "name", value: "a" })
   expect(readToken()).toEqual({ type: "term", value: "}_" })
   expect(readToken()).toEqual({ type: "string", value: '."' })
   expect(readToken()).toEqual({ type: "term", value: '"_' })
 
   // e = __"String d is _"He said, "_{a}_.""_ and equals __{d}__"__
-  expect(readToken()).toEqual({ type: "word", value: "e" })
+  expect(readToken()).toEqual({ type: "name", value: "e" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '__"' })
   expect(readToken()).toEqual({
@@ -154,12 +144,12 @@ Tasks for today:
     value: 'String d is _"He said, "_{a}_.""_ and equals ',
   })
   expect(readToken()).toEqual({ type: "term", value: "__{" })
-  expect(readToken()).toEqual({ type: "word", value: "d" })
+  expect(readToken()).toEqual({ type: "name", value: "d" })
   expect(readToken()).toEqual({ type: "term", value: "}__" })
   expect(readToken()).toEqual({ type: "term", value: '"__' })
 
   // f = "apples, {"bananas"}, cranberries"
-  expect(readToken()).toEqual({ type: "word", value: "f" })
+  expect(readToken()).toEqual({ type: "name", value: "f" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '"' })
   expect(readToken()).toEqual({ type: "string", value: "apples, " })
@@ -172,7 +162,7 @@ Tasks for today:
   expect(readToken()).toEqual({ type: "term", value: '"' })
 
   // g = "unwise, {"wild, {"arbitrary {"and excessively nested"}"}"}"
-  expect(readToken()).toEqual({ type: "word", value: "g" })
+  expect(readToken()).toEqual({ type: "name", value: "g" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '"' })
   expect(readToken()).toEqual({ type: "string", value: "unwise, " })
@@ -194,7 +184,7 @@ Tasks for today:
   expect(readToken()).toEqual({ type: "term", value: '"' })
 
   // h = "honestly, {_"I hope _{__"no one __{___"does this"___}__"__}_"_}."
-  expect(readToken()).toEqual({ type: "word", value: "h" })
+  expect(readToken()).toEqual({ type: "name", value: "h" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '"' })
   expect(readToken()).toEqual({ type: "string", value: "honestly, " })
@@ -217,7 +207,7 @@ Tasks for today:
   expect(readToken()).toEqual({ type: "term", value: '"' })
 
   // i = "Tasks for today:\n- Email Paul\n- Submit expense report"
-  expect(readToken()).toEqual({ type: "word", value: "i" })
+  expect(readToken()).toEqual({ type: "name", value: "i" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '"' })
   expect(readToken()).toEqual({
@@ -227,7 +217,7 @@ Tasks for today:
   expect(readToken()).toEqual({ type: "term", value: '"' })
 
   // j = _"Tasks for today:\n- Email "coderman"\n- Submit expense report"_
-  expect(readToken()).toEqual({ type: "word", value: "j" })
+  expect(readToken()).toEqual({ type: "name", value: "j" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '_"' })
   expect(readToken()).toEqual({
@@ -237,7 +227,7 @@ Tasks for today:
   expect(readToken()).toEqual({ type: "term", value: '"_' })
 
   // k = \_"[ \t\n]*"_
-  expect(readToken()).toEqual({ type: "word", value: "k" })
+  expect(readToken()).toEqual({ type: "name", value: "k" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: String.raw`\_"` })
   expect(readToken()).toEqual({
@@ -247,7 +237,7 @@ Tasks for today:
   expect(readToken()).toEqual({ type: "term", value: '"_' })
 
   // l = \_"Tasks for today:\_n- Email Paul\_n- Replace all "\t" with spaces"_
-  expect(readToken()).toEqual({ type: "word", value: "l" })
+  expect(readToken()).toEqual({ type: "name", value: "l" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: String.raw`\_"` })
   expect(readToken()).toEqual({
@@ -257,7 +247,7 @@ Tasks for today:
   expect(readToken()).toEqual({ type: "term", value: '"_' })
 
   // m = "Tasks for today:\n- Email Paul\n- Replace all \"\\t\" with spaces"
-  expect(readToken()).toEqual({ type: "word", value: "m" })
+  expect(readToken()).toEqual({ type: "name", value: "m" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '"' })
   expect(readToken()).toEqual({
@@ -267,7 +257,7 @@ Tasks for today:
   expect(readToken()).toEqual({ type: "term", value: '"' })
 
   // n = \__"The strings "\\n" and \_"\n"_ will produce equivalent output."__
-  expect(readToken()).toEqual({ type: "word", value: "n" })
+  expect(readToken()).toEqual({ type: "name", value: "n" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: String.raw`\__"` })
   expect(readToken()).toEqual({
@@ -277,7 +267,7 @@ Tasks for today:
   expect(readToken()).toEqual({ type: "term", value: '"__' })
 
   // o = \__"To create regex selecting whitespace use getRegex(\_"[ \t\n]*"_)""__
-  expect(readToken()).toEqual({ type: "word", value: "o" })
+  expect(readToken()).toEqual({ type: "name", value: "o" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: String.raw`\__"` })
   expect(readToken()).toEqual({
@@ -291,7 +281,7 @@ Tasks for today:
       "Strings are able to cross multiple lines, but the tokenizer should not 
         process the whitespace. The parser is better equipped to do that."
   */
-  expect(readToken()).toEqual({ type: "word", value: "p" })
+  expect(readToken()).toEqual({ type: "name", value: "p" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: '"' })
   expect(readToken()).toEqual({
@@ -306,7 +296,7 @@ Tasks for today:
       \n"Newline strings have different parsing behavior but the tokenizer 
         should treat them similarly."
   */
-  expect(readToken()).toEqual({ type: "word", value: "q" })
+  expect(readToken()).toEqual({ type: "name", value: "q" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: String.raw`\n"` })
   expect(readToken()).toEqual({
@@ -321,7 +311,7 @@ Tasks for today:
       \s"Whitespace strings have different parsing behavior but the tokenizer 
         should treat them similarly."
   */
-  expect(readToken()).toEqual({ type: "word", value: "r" })
+  expect(readToken()).toEqual({ type: "name", value: "r" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: String.raw`\s"` })
   expect(readToken()).toEqual({
@@ -339,7 +329,7 @@ Tasks for today:
       - Submit {reportType} report
     "
   */
-  expect(readToken()).toEqual({ type: "word", value: "s" })
+  expect(readToken()).toEqual({ type: "name", value: "s" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: String.raw`\n"` })
   expect(readToken()).toEqual({
@@ -351,7 +341,7 @@ Tasks for today:
       - Submit `,
   })
   expect(readToken()).toEqual({ type: "term", value: "{" })
-  expect(readToken()).toEqual({ type: "word", value: "reportType" })
+  expect(readToken()).toEqual({ type: "name", value: "reportType" })
   expect(readToken()).toEqual({ type: "term", value: "}" })
   expect(readToken()).toEqual({
     type: "string",
@@ -368,7 +358,7 @@ Tasks for today:
       - Submit _{reportType}_ report
     "_
   */
-  expect(readToken()).toEqual({ type: "word", value: "t" })
+  expect(readToken()).toEqual({ type: "name", value: "t" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: String.raw`_\n"` })
   expect(readToken()).toEqual({
@@ -380,7 +370,7 @@ Tasks for today:
       - Submit `,
   })
   expect(readToken()).toEqual({ type: "term", value: "_{" })
-  expect(readToken()).toEqual({ type: "word", value: "reportType" })
+  expect(readToken()).toEqual({ type: "name", value: "reportType" })
   expect(readToken()).toEqual({ type: "term", value: "}_" })
   expect(readToken()).toEqual({
     type: "string",
@@ -397,7 +387,7 @@ Tasks for today:
       - Submit _{reportType}_ report
     "_
   */
-  expect(readToken()).toEqual({ type: "word", value: "u" })
+  expect(readToken()).toEqual({ type: "name", value: "u" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: String.raw`\_\n"` })
   expect(readToken()).toEqual({
@@ -409,7 +399,7 @@ Tasks for today:
       - Submit `,
   })
   expect(readToken()).toEqual({ type: "term", value: "_{" })
-  expect(readToken()).toEqual({ type: "word", value: "reportType" })
+  expect(readToken()).toEqual({ type: "name", value: "reportType" })
   expect(readToken()).toEqual({ type: "term", value: "}_" })
   expect(readToken()).toEqual({
     type: "string",
@@ -426,7 +416,7 @@ Tasks for today:
 - Submit __{reportType}__ report
 "__
   */
-  expect(readToken()).toEqual({ type: "word", value: "v" })
+  expect(readToken()).toEqual({ type: "name", value: "v" })
   expect(readToken()).toEqual({ type: "term", value: "=" })
   expect(readToken()).toEqual({ type: "term", value: String.raw`\__\s"` })
   expect(readToken()).toEqual({
@@ -438,7 +428,7 @@ Tasks for today:
 - Submit `,
   })
   expect(readToken()).toEqual({ type: "term", value: "__{" })
-  expect(readToken()).toEqual({ type: "word", value: "reportType" })
+  expect(readToken()).toEqual({ type: "name", value: "reportType" })
   expect(readToken()).toEqual({ type: "term", value: "}__" })
   expect(readToken()).toEqual({
     type: "string",

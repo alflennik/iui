@@ -1,3 +1,5 @@
+const getMatcher = require("./matches")
+
 const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
   let character = code[0]
   let index = 0
@@ -18,15 +20,16 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
   const openBrackets = []
   const brackets = {}
   let shouldBreak = false
+  let whitespace = ""
 
   while (true) {
     if (shouldBreak) break
 
-    // let fiftyBefore = index - 50 > 0 ? index - 50 : 0
-    // console.log(code.slice(fiftyBefore, index) + ">" + code.slice(index, index + 100))
-    // if (index >= 599) {
-    //   console.log()
-    // }
+    let fiftyBefore = index - 50 > 0 ? index - 50 : 0
+    console.log(code.slice(fiftyBefore, index) + ">" + code.slice(index, index + 100))
+    if (index >= 3603) {
+      console.log()
+    }
 
     let isString
     let isStringSubstitution
@@ -175,13 +178,15 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
 
     if (isStringStart()) {
       openBrackets.push({ bracket: stringBracket, line, column, index })
-      tokens.push({ type: "term", value: stringBracket, line, column })
+      tokens.push({ type: "term", value: stringBracket, whitespace, line, column })
+      whitespace = ""
       advanceCharacters(stringBracket.length)
       continue
     }
 
     if (isStringSubstitutionStart()) {
-      tokens.push({ type: "term", value: stringSubstitutionBracket, line, column })
+      tokens.push({ type: "term", value: stringSubstitutionBracket, whitespace, line, column })
+      whitespace = ""
       openBrackets.push({ bracket: stringSubstitutionBracket, line, column, index })
       advanceCharacters(stringSubstitutionBracket.length)
       continue
@@ -191,7 +196,8 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
       advanceCharacters(stringSubstitutionBracket.length)
       const openBracket = openBrackets.splice(-1, 1)[0]
       brackets[`${openBracket.line}:${openBracket.column}`] = `${line}:${column}`
-      tokens.push({ type: "term", value: stringSubstitutionBracket, line, column })
+      tokens.push({ type: "term", value: stringSubstitutionBracket, whitespace, line, column })
+      whitespace = ""
       continue
     }
 
@@ -199,7 +205,8 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
       advanceCharacters(stringBracket.length)
       const openBracket = openBrackets.splice(-1, 1)[0]
       brackets[`${openBracket.line}:${openBracket.column}`] = `${line}:${column}`
-      tokens.push({ type: "term", value: stringBracket, line, column })
+      tokens.push({ type: "term", value: stringBracket, whitespace, line, column })
+      whitespace = ""
       continue
     }
 
@@ -221,34 +228,40 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
         value += character
         advanceCharacters(1)
       }
-      tokens.push({ type: "string", value, line: startingLine, column: startingColumn })
+      tokens.push({ type: "string", value, whitespace, line: startingLine, column: startingColumn })
+      whitespace = ""
       continue
     }
 
     if (character === "=") {
-      tokens.push({ type: "term", value: "=", line, column })
+      tokens.push({ type: "term", value: "=", whitespace, line, column })
+      whitespace = ""
       advanceCharacters(1)
       continue
     }
 
     if (!isString && character.match(/[a-z]/)) {
-      let word = character
+      let name = character
       let peek = 1
       while (true) {
         peekCharacter = code[index + peek]
         if (peekCharacter.match(/[a-zA-Z0-9]/)) {
-          word += peekCharacter
+          name += peekCharacter
           peek += 1
           continue
         }
         break
       }
-      tokens.push({ type: "word", value: word, line, column })
-      advanceCharacters(word.length)
+      tokens.push({ type: "name", value: name, whitespace, line, column })
+      whitespace = ""
+      advanceCharacters(name.length)
       continue
     }
 
-    advanceCharacters(1)
+    if (character.match(/[ \t\n]/)) {
+      whitespace + character
+      advanceCharacters(1)
+    }
   }
 
   if (errors.length) return { errors }
@@ -281,16 +294,12 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
     throw new Error("open bracket error not yet implemented")
   })
 
-  console.log(openBrackets)
-  console.log()
-
   if (errors.length) return { errors }
 
-  // console.log(tokens)
-
   let tokenIndex = 0
+  const getTokenIndex = () => tokenIndex
 
-  const matches = matchers => {}
+  const matches = getMatcher({ tokens, getTokenIndex, brackets })
 
   const readToken = () => {
     const nextToken = tokens[tokenIndex]
@@ -298,7 +307,11 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
     return nextToken
   }
 
-  return { matches, readToken }
+  const peekToken = (ahead = 1) => {
+    return tokens[tokenIndex + ahead]
+  }
+
+  return { matches, readToken, peekToken }
 }
 
 const isStringStartBracket = bracket => {

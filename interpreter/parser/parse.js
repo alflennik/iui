@@ -1,15 +1,15 @@
 const { parseBlockContents } = require("./parseBlock")
 
-let tokenStream
+let tokenizer
 // let failedToParse
 
-const parse = providedTokenStream => {
-  tokenStream = providedTokenStream
+const parse = providedTokenizer => {
+  tokenizer = providedTokenizer
 
   // failedToParse = () => {
   //   throw new Error(
-  //     `Failed to parse syntax at ${tokenStream.filePath}:${tokenStream.lineNumber}:` +
-  //       `${tokenStream.columnNumber}`
+  //     `Failed to parse syntax at ${tokenizer.filePath}:${tokenizer.lineNumber}:` +
+  //       `${tokenizer.columnNumber}`
   //   )
   // }
 
@@ -17,5 +17,5 @@ const parse = providedTokenStream => {
 }
 
 module.exports = parse
-module.exports.tokenStream = tokenStream
+module.exports.tokenizer = tokenizer
 // module.exports.failedToParse = failedToParse

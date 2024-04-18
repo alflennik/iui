@@ -1,4 +1,4 @@
-const { tokenStream } = require("./parse")
+const { tokenizer } = require("./parse")
 
 const parseExpression = () => {
   // Parsing the various parts of an expression need to happen in the right order, that is,
@@ -14,7 +14,7 @@ const parseExpression = () => {
 
   const pushExpressionStart = () => {
     // if (tokenMatchesUnaryOperator()) {
-    //   const token = tokenStream.nextToken()
+    //   const token = tokenizer.nextToken()
     //   const { operatorPrecedence } = token
     //   tokensOrNodes.push({ token, operatorPrecedence, operatorType: "unary" })
     //   parseExpressionStart()
@@ -24,11 +24,11 @@ const parseExpression = () => {
     //   tokensOrNodes.push({ node: parseIf() })
     // }
 
-    if (tokenStream.matches([{ type: "name" }])) {
+    if (tokenizer.matches([{ type: "name" }])) {
       operatorsOrNodes.push(parseName())
     }
 
-    if (tokenStream.matches([{ value: value => value.endsWith('"') }])) {
+    if (tokenizer.matches([{ value: value => value.endsWith('"') }])) {
       operatorsOrNodes.push(parseString())
     }
   }
@@ -36,11 +36,11 @@ const parseExpression = () => {
   pushExpressionStart()
 
   while (true) {
-    // if (tokenStream.matches([{ value: "(", hasBoundaryLeft: false }])) {
+    // if (tokenizer.matches([{ value: "(", hasBoundaryLeft: false }])) {
     // parse arguments in the parentheses, but leave precedence unprocessed
     // }
 
-    if (tokenStream.matches([{ value: "=" }])) {
+    if (tokenizer.matches([{ value: "=" }])) {
       skipToken("=")
       operatorsOrNodes.push({ operator: "assignment", precedence: "binaryLowest" })
       pushExpressionStart()
@@ -52,8 +52,8 @@ const parseExpression = () => {
   // Would apply in a scenario like this where two otherwise valid expressions are placed on the
   // same line:
   // &index = 0 index = >< &index
-  if (!tokenStream.matches([{ hasNewlineLeft: true }])) {
-    const peekToken = tokenStream.peekToken()
+  if (!tokenizer.matches([{ hasNewlineLeft: true }])) {
+    const peekToken = tokenizer.peekToken()
     return {
       errors: [
         {

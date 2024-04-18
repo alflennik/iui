@@ -1,5 +1,10 @@
-// TODO
+const { test, expect } = require("../../test")
+const { getTokenizer } = require("../tokenizer/tokenizer")
+const { parse } = require("../parser/parse")
+const getCurrentLineNumber = require("../utilities/getCurrentLineNumber")
+
 test("parser can read multiline strings", () => {
+  const codeLineStart = getCurrentLineNumber() + 1
   const code = `
     a = 
       "Strings can be wrapped on any space character, by converting the space
@@ -20,7 +25,7 @@ test("parser can read multiline strings", () => {
         \  only  breaks  are  on  double  spaces,  an  escape  character  can
          be  used  to  preserve  the  formatting.  As  you  can  tell  the  
          second  line  is  the  line  that  set  the  indentation  level  and  
-         whitespace  is  allowed  after  that.
+         whitespace  is  allowed  after  that."
 
     e =
       "Different indentations can be used between different strings. For 
@@ -71,7 +76,7 @@ test("parser can read multiline strings", () => {
     k = \n"\
       mySum = 1 + 1
       myDivision = 3 / 2
-      myProduct = 8 ** 8"
+      myProduct = 8 ** 8
       crazyNum = (
         mySum
           + mySum
@@ -118,14 +123,19 @@ Tasks for today:
 "__
   `
 
+  const tokenizer = getTokenizer(code, { filePath: __filename, startingLineNumber: codeLineStart })
+  const ast = parse(tokenizer)
+
+  console.log(ast)
+
   throw new Error("not implemented")
 })
 
-test("quick analyzer can raise issues with strings", () => {
-  const fail1 = `
-    a = "
-       Oops I pasted in a string that has one extra space more than I expected, 
-      hopefully that doesn't cause any issues.
-    "
-  `
-})
+// test("quick analyzer can raise issues with strings", () => {
+//   const fail1 = `
+//     a = "
+//        Oops I pasted in a string that has one extra space more than I expected,
+//       hopefully that doesn't cause any issues.
+//     "
+//   `
+// })
