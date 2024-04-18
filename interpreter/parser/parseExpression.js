@@ -1,5 +1,3 @@
-const { tokenizer } = require("./parse")
-
 const parseExpression = () => {
   // Parsing the various parts of an expression need to happen in the right order, that is,
   // operator precedence needs to be considered. It's not just that 1 + 5 * 10 equals 51, due to

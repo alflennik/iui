@@ -27,7 +27,7 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
 
     let fiftyBefore = index - 50 > 0 ? index - 50 : 0
     console.log(code.slice(fiftyBefore, index) + ">" + code.slice(index, index + 100))
-    if (index >= 3603) {
+    if (index >= 3564) {
       console.log()
     }
 

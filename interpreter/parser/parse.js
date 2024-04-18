@@ -1,10 +1,9 @@
 const { parseBlockContents } = require("./parseBlock")
 
-let tokenizer
 // let failedToParse
 
-const parse = providedTokenizer => {
-  tokenizer = providedTokenizer
+const parse = tokenizer => {
+  global.tokenizer = tokenizer
 
   // failedToParse = () => {
   //   throw new Error(
@@ -17,5 +16,4 @@ const parse = providedTokenizer => {
 }
 
 module.exports = parse
-module.exports.tokenizer = tokenizer
 // module.exports.failedToParse = failedToParse

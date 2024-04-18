@@ -1,11 +1,11 @@
 const { test, expect } = require("../../test")
 const { getTokenizer } = require("../tokenizer/tokenizer")
-const { parse } = require("../parser/parse")
+const parse = require("../parser/parse")
 const getCurrentLineNumber = require("../utilities/getCurrentLineNumber")
 
 test("parser can read multiline strings", () => {
   const codeLineStart = getCurrentLineNumber() + 1
-  const code = `
+  const code = String.raw`
     a = 
       "Strings can be wrapped on any space character, by converting the space
         to a line break. Additionally, any whitespace which occurs before the 

@@ -1,4 +1,3 @@
-// const { tokenizer } = require("./parse")
 const { parseStatement } = require("./parseStatement")
 
 const parseBlockContents = () => {
