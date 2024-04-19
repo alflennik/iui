@@ -6,4 +6,4 @@ const pick = (object, keys) => {
   return newObject
 }
 
-module.exports = pick
+export default pick

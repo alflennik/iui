@@ -1,4 +1,4 @@
-const { parseStatement } = require("./parseStatement")
+import { parseStatement } from "./parseStatement.js"
 
 const parseBlockContents = () => {
   const statements = []
@@ -26,4 +26,4 @@ const parseBlockContents = () => {
 //   return parseBlockSpecial(parseBlockContents)
 // }
 
-module.exports = { parseBlockContents /* , parseBlockSpecial, parseBlock */ }
+export { parseBlockContents /* , parseBlockSpecial, parseBlock */ }

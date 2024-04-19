@@ -1,6 +1,6 @@
 const parseName = () => {
-  const name = tokenizer.nextToken()
-  return { type: "name", name }
+  const nameToken = tokenizer.nextToken()
+  return { type: "name", name: nameToken.value }
 }
 
-module.exports = { parseName }
+export { parseName }

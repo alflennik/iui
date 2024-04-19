@@ -1,4 +1,4 @@
-const getMatcher = require("./matches")
+import getMatcher from "./matches.js"
 
 const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
   let character = code[0]
@@ -25,11 +25,11 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
   while (true) {
     if (shouldBreak) break
 
-    let fiftyBefore = index - 50 > 0 ? index - 50 : 0
-    console.log(code.slice(fiftyBefore, index) + ">" + code.slice(index, index + 100))
-    if (index >= 3564) {
-      console.log()
-    }
+    // let fiftyBefore = index - 50 > 0 ? index - 50 : 0
+    // console.log(code.slice(fiftyBefore, index) + ">" + code.slice(index, index + 100))
+    // if (index >= 3564) {
+    //   console.log()
+    // }
 
     let isString
     let isStringSubstitution
@@ -99,7 +99,7 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
       stringBracket = character
       let peek = 1
       while (true) {
-        peekCharacter = code[index + peek]
+        const peekCharacter = code[index + peek]
 
         if (peekCharacter === '"') {
           stringBracket += '"'
@@ -244,7 +244,7 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
       let name = character
       let peek = 1
       while (true) {
-        peekCharacter = code[index + peek]
+        const peekCharacter = code[index + peek]
         if (peekCharacter.match(/[a-zA-Z0-9]/)) {
           name += peekCharacter
           peek += 1
@@ -301,17 +301,17 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
 
   const matches = getMatcher({ tokens, getTokenIndex, brackets })
 
-  const readToken = () => {
-    const nextToken = tokens[tokenIndex]
+  const nextToken = () => {
+    const token = tokens[tokenIndex]
     tokenIndex += 1
-    return nextToken
+    return token
   }
 
-  const peekToken = (ahead = 1) => {
-    return tokens[tokenIndex + ahead]
+  const peekToken = (offset = 0) => {
+    return tokens[tokenIndex + offset]
   }
 
-  return { matches, readToken, peekToken }
+  return { matches, nextToken, peekToken }
 }
 
 const isStringStartBracket = bracket => {
@@ -322,4 +322,4 @@ const isStringStartBracket = bracket => {
   return !!bracket.match(/^(\\?_+|_*)(\\s|\\n|)"$/)
 }
 
-module.exports = { getTokenizer, isStringStartBracket }
+export { getTokenizer, isStringStartBracket }

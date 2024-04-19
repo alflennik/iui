@@ -1,4 +1,4 @@
-const { parseBlockContents } = require("./parseBlock")
+import { parseBlockContents } from "./parseBlock.js"
 
 // let failedToParse
 
@@ -15,5 +15,5 @@ const parse = tokenizer => {
   return parseBlockContents()
 }
 
-module.exports = parse
+export { parse }
 // module.exports.failedToParse = failedToParse

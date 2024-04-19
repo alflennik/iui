@@ -1,7 +1,7 @@
-const { test, expect } = require("../../test")
-const { getTokenizer, isStringStartBracket } = require("../tokenizer/tokenizer")
-const getCurrentLineNumber = require("../utilities/getCurrentLineNumber")
-const pick = require("../utilities/pick")
+import { test, expect } from "../../test.js"
+import { getTokenizer, isStringStartBracket } from "../tokenizer/tokenizer.js"
+import getCurrentLineNumber from "../utilities/getCurrentLineNumber.js"
+import pick from "../utilities/pick.js"
 
 test("isValidStringBracket can validate correct brackets", () => {
   const validBrackets = [
@@ -96,230 +96,233 @@ Tasks for today:
 "__
     `
 
-  const tokenizer = getTokenizer(code, { filePath: __filename, startingLineNumber: codeLineStart })
+  const tokenizer = getTokenizer(code, {
+    filePath: import.meta.url,
+    startingLineNumber: codeLineStart,
+  })
 
-  const readToken = () => pick(tokenizer.readToken(), ["type", "value"])
+  const nextToken = () => pick(tokenizer.nextToken(), ["type", "value"])
 
   // a = "hello"
-  expect(readToken()).toEqual({ type: "name", value: "a" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "string", value: "hello" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "name", value: "a" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "string", value: "hello" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   // b = _"He said, "Yo.""_
-  expect(readToken()).toEqual({ type: "name", value: "b" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '_"' })
-  expect(readToken()).toEqual({ type: "string", value: 'He said, "Yo."' })
-  expect(readToken()).toEqual({ type: "term", value: '"_' })
+  expect(nextToken()).toEqual({ type: "name", value: "b" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '_"' })
+  expect(nextToken()).toEqual({ type: "string", value: 'He said, "Yo."' })
+  expect(nextToken()).toEqual({ type: "term", value: '"_' })
 
   // c = "He said {a}"
-  expect(readToken()).toEqual({ type: "name", value: "c" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "string", value: "He said " })
-  expect(readToken()).toEqual({ type: "term", value: "{" })
-  expect(readToken()).toEqual({ type: "name", value: "a" })
-  expect(readToken()).toEqual({ type: "term", value: "}" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "name", value: "c" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "string", value: "He said " })
+  expect(nextToken()).toEqual({ type: "term", value: "{" })
+  expect(nextToken()).toEqual({ type: "name", value: "a" })
+  expect(nextToken()).toEqual({ type: "term", value: "}" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   // d = _"He said, "_{a}_.""_
-  expect(readToken()).toEqual({ type: "name", value: "d" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '_"' })
-  expect(readToken()).toEqual({ type: "string", value: 'He said, "' })
-  expect(readToken()).toEqual({ type: "term", value: "_{" })
-  expect(readToken()).toEqual({ type: "name", value: "a" })
-  expect(readToken()).toEqual({ type: "term", value: "}_" })
-  expect(readToken()).toEqual({ type: "string", value: '."' })
-  expect(readToken()).toEqual({ type: "term", value: '"_' })
+  expect(nextToken()).toEqual({ type: "name", value: "d" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '_"' })
+  expect(nextToken()).toEqual({ type: "string", value: 'He said, "' })
+  expect(nextToken()).toEqual({ type: "term", value: "_{" })
+  expect(nextToken()).toEqual({ type: "name", value: "a" })
+  expect(nextToken()).toEqual({ type: "term", value: "}_" })
+  expect(nextToken()).toEqual({ type: "string", value: '."' })
+  expect(nextToken()).toEqual({ type: "term", value: '"_' })
 
   // e = __"String d is _"He said, "_{a}_.""_ and equals __{d}__"__
-  expect(readToken()).toEqual({ type: "name", value: "e" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '__"' })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "e" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '__"' })
+  expect(nextToken()).toEqual({
     type: "string",
     value: 'String d is _"He said, "_{a}_.""_ and equals ',
   })
-  expect(readToken()).toEqual({ type: "term", value: "__{" })
-  expect(readToken()).toEqual({ type: "name", value: "d" })
-  expect(readToken()).toEqual({ type: "term", value: "}__" })
-  expect(readToken()).toEqual({ type: "term", value: '"__' })
+  expect(nextToken()).toEqual({ type: "term", value: "__{" })
+  expect(nextToken()).toEqual({ type: "name", value: "d" })
+  expect(nextToken()).toEqual({ type: "term", value: "}__" })
+  expect(nextToken()).toEqual({ type: "term", value: '"__' })
 
   // f = "apples, {"bananas"}, cranberries"
-  expect(readToken()).toEqual({ type: "name", value: "f" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "string", value: "apples, " })
-  expect(readToken()).toEqual({ type: "term", value: "{" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "string", value: "bananas" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "term", value: "}" })
-  expect(readToken()).toEqual({ type: "string", value: ", cranberries" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "name", value: "f" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "string", value: "apples, " })
+  expect(nextToken()).toEqual({ type: "term", value: "{" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "string", value: "bananas" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "term", value: "}" })
+  expect(nextToken()).toEqual({ type: "string", value: ", cranberries" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   // g = "unwise, {"wild, {"arbitrary {"and excessively nested"}"}"}"
-  expect(readToken()).toEqual({ type: "name", value: "g" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "string", value: "unwise, " })
-  expect(readToken()).toEqual({ type: "term", value: "{" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "string", value: "wild, " })
-  expect(readToken()).toEqual({ type: "term", value: "{" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "string", value: "arbitrary " })
-  expect(readToken()).toEqual({ type: "term", value: "{" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "string", value: "and excessively nested" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "term", value: "}" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "term", value: "}" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "term", value: "}" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "name", value: "g" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "string", value: "unwise, " })
+  expect(nextToken()).toEqual({ type: "term", value: "{" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "string", value: "wild, " })
+  expect(nextToken()).toEqual({ type: "term", value: "{" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "string", value: "arbitrary " })
+  expect(nextToken()).toEqual({ type: "term", value: "{" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "string", value: "and excessively nested" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "term", value: "}" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "term", value: "}" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "term", value: "}" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   // h = "honestly, {_"I hope _{__"no one __{___"does this"___}__"__}_"_}."
-  expect(readToken()).toEqual({ type: "name", value: "h" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({ type: "string", value: "honestly, " })
-  expect(readToken()).toEqual({ type: "term", value: "{" })
-  expect(readToken()).toEqual({ type: "term", value: '_"' })
-  expect(readToken()).toEqual({ type: "string", value: "I hope " })
-  expect(readToken()).toEqual({ type: "term", value: "_{" })
-  expect(readToken()).toEqual({ type: "term", value: '__"' })
-  expect(readToken()).toEqual({ type: "string", value: "no one " })
-  expect(readToken()).toEqual({ type: "term", value: "__{" })
-  expect(readToken()).toEqual({ type: "term", value: '___"' })
-  expect(readToken()).toEqual({ type: "string", value: "does this" })
-  expect(readToken()).toEqual({ type: "term", value: '"___' })
-  expect(readToken()).toEqual({ type: "term", value: "}__" })
-  expect(readToken()).toEqual({ type: "term", value: '"__' })
-  expect(readToken()).toEqual({ type: "term", value: "}_" })
-  expect(readToken()).toEqual({ type: "term", value: '"_' })
-  expect(readToken()).toEqual({ type: "term", value: "}" })
-  expect(readToken()).toEqual({ type: "string", value: "." })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "name", value: "h" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "string", value: "honestly, " })
+  expect(nextToken()).toEqual({ type: "term", value: "{" })
+  expect(nextToken()).toEqual({ type: "term", value: '_"' })
+  expect(nextToken()).toEqual({ type: "string", value: "I hope " })
+  expect(nextToken()).toEqual({ type: "term", value: "_{" })
+  expect(nextToken()).toEqual({ type: "term", value: '__"' })
+  expect(nextToken()).toEqual({ type: "string", value: "no one " })
+  expect(nextToken()).toEqual({ type: "term", value: "__{" })
+  expect(nextToken()).toEqual({ type: "term", value: '___"' })
+  expect(nextToken()).toEqual({ type: "string", value: "does this" })
+  expect(nextToken()).toEqual({ type: "term", value: '"___' })
+  expect(nextToken()).toEqual({ type: "term", value: "}__" })
+  expect(nextToken()).toEqual({ type: "term", value: '"__' })
+  expect(nextToken()).toEqual({ type: "term", value: "}_" })
+  expect(nextToken()).toEqual({ type: "term", value: '"_' })
+  expect(nextToken()).toEqual({ type: "term", value: "}" })
+  expect(nextToken()).toEqual({ type: "string", value: "." })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   // i = "Tasks for today:\n- Email Paul\n- Submit expense report"
-  expect(readToken()).toEqual({ type: "name", value: "i" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "i" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`Tasks for today:\n- Email Paul\n- Submit expense report`,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   // j = _"Tasks for today:\n- Email "coderman"\n- Submit expense report"_
-  expect(readToken()).toEqual({ type: "name", value: "j" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '_"' })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "j" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '_"' })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`Tasks for today:\n- Email "coderman"\n- Submit expense report`,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"_' })
+  expect(nextToken()).toEqual({ type: "term", value: '"_' })
 
   // k = \_"[ \t\n]*"_
-  expect(readToken()).toEqual({ type: "name", value: "k" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: String.raw`\_"` })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "k" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: String.raw`\_"` })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`[ \t\n]*`,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"_' })
+  expect(nextToken()).toEqual({ type: "term", value: '"_' })
 
   // l = \_"Tasks for today:\_n- Email Paul\_n- Replace all "\t" with spaces"_
-  expect(readToken()).toEqual({ type: "name", value: "l" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: String.raw`\_"` })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "l" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: String.raw`\_"` })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`Tasks for today:\_n- Email Paul\_n- Replace all "\t" with spaces`,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"_' })
+  expect(nextToken()).toEqual({ type: "term", value: '"_' })
 
   // m = "Tasks for today:\n- Email Paul\n- Replace all \"\\t\" with spaces"
-  expect(readToken()).toEqual({ type: "name", value: "m" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "m" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`Tasks for today:\n- Email Paul\n- Replace all \"\\t\" with spaces`,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   // n = \__"The strings "\\n" and \_"\n"_ will produce equivalent output."__
-  expect(readToken()).toEqual({ type: "name", value: "n" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: String.raw`\__"` })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "n" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: String.raw`\__"` })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`The strings "\\n" and \_"\n"_ will produce equivalent output.`,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"__' })
+  expect(nextToken()).toEqual({ type: "term", value: '"__' })
 
   // o = \__"To create regex selecting whitespace use getRegex(\_"[ \t\n]*"_)""__
-  expect(readToken()).toEqual({ type: "name", value: "o" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: String.raw`\__"` })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "o" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: String.raw`\__"` })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`To create regex selecting whitespace use getRegex(\_"[ \t\n]*"_)"`,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"__' })
+  expect(nextToken()).toEqual({ type: "term", value: '"__' })
 
   /*
     p = 
       "Strings are able to cross multiple lines, but the tokenizer should not 
         process the whitespace. The parser is better equipped to do that."
   */
-  expect(readToken()).toEqual({ type: "name", value: "p" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "p" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({
     type: "string",
     value: `Strings are able to cross multiple lines, but the tokenizer should not 
         process the whitespace. The parser is better equipped to do that.`,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   /*
     q = 
       \n"Newline strings have different parsing behavior but the tokenizer 
         should treat them similarly."
   */
-  expect(readToken()).toEqual({ type: "name", value: "q" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: String.raw`\n"` })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "q" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: String.raw`\n"` })
+  expect(nextToken()).toEqual({
     type: "string",
     value: `Newline strings have different parsing behavior but the tokenizer 
         should treat them similarly.`,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   /*
     r = 
       \s"Whitespace strings have different parsing behavior but the tokenizer 
         should treat them similarly."
   */
-  expect(readToken()).toEqual({ type: "name", value: "r" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: String.raw`\s"` })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "r" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: String.raw`\s"` })
+  expect(nextToken()).toEqual({
     type: "string",
     value: `Whitespace strings have different parsing behavior but the tokenizer 
         should treat them similarly.`,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   /*
     s = \n"\
@@ -329,10 +332,10 @@ Tasks for today:
       - Submit {reportType} report
     "
   */
-  expect(readToken()).toEqual({ type: "name", value: "s" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: String.raw`\n"` })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "s" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: String.raw`\n"` })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`\
       Tasks for today:
@@ -340,15 +343,15 @@ Tasks for today:
       - Replace all \"\\t\" with spaces
       - Submit `,
   })
-  expect(readToken()).toEqual({ type: "term", value: "{" })
-  expect(readToken()).toEqual({ type: "name", value: "reportType" })
-  expect(readToken()).toEqual({ type: "term", value: "}" })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "term", value: "{" })
+  expect(nextToken()).toEqual({ type: "name", value: "reportType" })
+  expect(nextToken()).toEqual({ type: "term", value: "}" })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw` report
     `,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"' })
+  expect(nextToken()).toEqual({ type: "term", value: '"' })
 
   /*
     t = _\n"\
@@ -358,10 +361,10 @@ Tasks for today:
       - Submit _{reportType}_ report
     "_
   */
-  expect(readToken()).toEqual({ type: "name", value: "t" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: String.raw`_\n"` })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "t" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: String.raw`_\n"` })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`\
       Tasks for today:
@@ -369,15 +372,15 @@ Tasks for today:
       - Replace all "\\t" with spaces
       - Submit `,
   })
-  expect(readToken()).toEqual({ type: "term", value: "_{" })
-  expect(readToken()).toEqual({ type: "name", value: "reportType" })
-  expect(readToken()).toEqual({ type: "term", value: "}_" })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "term", value: "_{" })
+  expect(nextToken()).toEqual({ type: "name", value: "reportType" })
+  expect(nextToken()).toEqual({ type: "term", value: "}_" })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw` report
     `,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"_' })
+  expect(nextToken()).toEqual({ type: "term", value: '"_' })
 
   /*
     u = \_\n"\_
@@ -387,10 +390,10 @@ Tasks for today:
       - Submit _{reportType}_ report
     "_
   */
-  expect(readToken()).toEqual({ type: "name", value: "u" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: String.raw`\_\n"` })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "u" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: String.raw`\_\n"` })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`\_
       Tasks for today:
@@ -398,15 +401,15 @@ Tasks for today:
       - Replace all "\t" with spaces
       - Submit `,
   })
-  expect(readToken()).toEqual({ type: "term", value: "_{" })
-  expect(readToken()).toEqual({ type: "name", value: "reportType" })
-  expect(readToken()).toEqual({ type: "term", value: "}_" })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "term", value: "_{" })
+  expect(nextToken()).toEqual({ type: "name", value: "reportType" })
+  expect(nextToken()).toEqual({ type: "term", value: "}_" })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw` report
     `,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"_' })
+  expect(nextToken()).toEqual({ type: "term", value: '"_' })
 
   /*
     v = \__\s"\__
@@ -416,10 +419,10 @@ Tasks for today:
 - Submit __{reportType}__ report
 "__
   */
-  expect(readToken()).toEqual({ type: "name", value: "v" })
-  expect(readToken()).toEqual({ type: "term", value: "=" })
-  expect(readToken()).toEqual({ type: "term", value: String.raw`\__\s"` })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "name", value: "v" })
+  expect(nextToken()).toEqual({ type: "term", value: "=" })
+  expect(nextToken()).toEqual({ type: "term", value: String.raw`\__\s"` })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw`\__
 Tasks for today:
@@ -427,21 +430,21 @@ Tasks for today:
 - Replace all "\t" with spaces
 - Submit `,
   })
-  expect(readToken()).toEqual({ type: "term", value: "__{" })
-  expect(readToken()).toEqual({ type: "name", value: "reportType" })
-  expect(readToken()).toEqual({ type: "term", value: "}__" })
-  expect(readToken()).toEqual({
+  expect(nextToken()).toEqual({ type: "term", value: "__{" })
+  expect(nextToken()).toEqual({ type: "name", value: "reportType" })
+  expect(nextToken()).toEqual({ type: "term", value: "}__" })
+  expect(nextToken()).toEqual({
     type: "string",
     value: String.raw` report
 `,
   })
-  expect(readToken()).toEqual({ type: "term", value: '"__' })
+  expect(nextToken()).toEqual({ type: "term", value: '"__' })
 })
 
 test("tokenizer can identify issues with strings", () => {
   const getErrors = (fail, lineNumber) => {
     const { errors } = getTokenizer(fail, {
-      filePath: __filename,
+      filePath: import.meta.url,
       startingLineNumber: lineNumber,
     })
     return errors
@@ -455,7 +458,9 @@ test("tokenizer can identify issues with strings", () => {
   `
 
   expect(getErrors(fail1, fail1LineStart)).toEqual([
-    `Found open string \`"\` which was not closed\n  at ${__filename}:${fail1LineStart + 3}:10`,
+    `Found open string \`"\` which was not closed\n  at ${import.meta.url}:${
+      fail1LineStart + 3
+    }:10`,
   ])
 
   const fail2LineStart = getCurrentLineNumber() + 1
@@ -467,11 +472,12 @@ test("tokenizer can identify issues with strings", () => {
   `
 
   expect(getErrors(fail2, fail2LineStart)).toEqual([
-    `Found open string \`"\` which was not closed\n  ` + `at ${__filename}:${fail2LineStart + 2}:9`,
-    `Found open string substitution "{" which was not closed\n  ` +
-      `at ${__filename}:${fail2LineStart + 2}:19`,
     `Found open string \`"\` which was not closed\n  ` +
-      `at ${__filename}:${fail2LineStart + 4}:10`,
+      `at ${import.meta.url}:${fail2LineStart + 2}:9`,
+    `Found open string substitution "{" which was not closed\n  ` +
+      `at ${import.meta.url}:${fail2LineStart + 2}:19`,
+    `Found open string \`"\` which was not closed\n  ` +
+      `at ${import.meta.url}:${fail2LineStart + 4}:10`,
   ])
 
   const fail3LineStart = getCurrentLineNumber() + 1
@@ -481,6 +487,6 @@ test("tokenizer can identify issues with strings", () => {
 
   expect(getErrors(fail3, fail3LineStart)).toEqual([
     `String should be closed with \`"__\` but found an extra \`_\`\n  ` +
-      `at ${__filename}:${fail3LineStart + 1}:40`,
+      `at ${import.meta.url}:${fail3LineStart + 1}:40`,
   ])
 })

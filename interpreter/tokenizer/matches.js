@@ -12,9 +12,9 @@ const getMatcher = ({ tokens, getTokenIndex /* , brackets */ }) => {
       if (matcher.value) {
         if (typeof matcher.value === "function") {
           if (!matcher.value(peekToken.value)) return false
+        } else {
+          if (matcher.value !== peekToken.value) return false
         }
-
-        if (value !== peekToken.value) return false
       }
 
       if (matcher.hasNewlineLeft && !peekToken.whitespace.includes("\n")) return false
@@ -27,4 +27,4 @@ const getMatcher = ({ tokens, getTokenIndex /* , brackets */ }) => {
   return matches
 }
 
-module.exports = getMatcher
+export default getMatcher

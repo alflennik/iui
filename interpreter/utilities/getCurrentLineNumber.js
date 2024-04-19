@@ -3,4 +3,4 @@ const getCurrentLineNumber = () => {
   return Number(error.stack.match(/:\d+:\d+/g)[1].match(/:(\d+)/)[1])
 }
 
-module.exports = getCurrentLineNumber
+export default getCurrentLineNumber

@@ -1,7 +1,7 @@
-const { test, expect } = require("../../test")
-const { getTokenizer } = require("../tokenizer/tokenizer")
-const parse = require("../parser/parse")
-const getCurrentLineNumber = require("../utilities/getCurrentLineNumber")
+import { test, expect } from "../../test.js"
+import { getTokenizer } from "../tokenizer/tokenizer.js"
+import { parse } from "../parser/parse.js"
+import getCurrentLineNumber from "../utilities/getCurrentLineNumber.js"
 
 test("parser can read multiline strings", () => {
   const codeLineStart = getCurrentLineNumber() + 1
@@ -123,7 +123,10 @@ Tasks for today:
 "__
   `
 
-  const tokenizer = getTokenizer(code, { filePath: __filename, startingLineNumber: codeLineStart })
+  const tokenizer = getTokenizer(code, {
+    filePath: import.meta.url,
+    startingLineNumber: codeLineStart,
+  })
   const ast = parse(tokenizer)
 
   console.log(ast)

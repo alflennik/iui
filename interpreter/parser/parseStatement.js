@@ -1,4 +1,4 @@
-const { parseExpression } = require("./parseExpression")
+import { parseExpression } from "./parseExpression.js"
 // const { parseReturn } = require("./parseReturn")
 
 const parseStatement = () => {
@@ -8,4 +8,4 @@ const parseStatement = () => {
   return parseExpression()
 }
 
-module.exports = { parseStatement }
+export { parseStatement }
