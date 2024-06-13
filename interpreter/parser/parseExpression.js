@@ -51,7 +51,7 @@ const parseExpression = () => {
   // Would apply in a scenario like this where two otherwise valid expressions are placed on the
   // same line:
   // &index = 0 index = >< &index
-  if (!tokenizer.matches([{ hasNewlineLeft: true }])) {
+  if (tokenizer.peekToken() && !tokenizer.matches([{ hasNewlineLeft: true }])) {
     const peekToken = tokenizer.peekToken()
     return {
       errors: [
@@ -81,7 +81,7 @@ const parseExpression = () => {
       if (["assignment"].includes(operatorsOrNodes[index].operator)) {
         const previous = operatorsOrNodes[index - 1]
         const next = operatorsOrNodes[index + 1]
-        const node = { type: "assignment", left: previous, right: next }
+        const node = { type: "assignment", expression: previous, expression2: next }
         operatorsOrNodes.splice(index - 1, 3, node)
         // Because of splice the index can just stay the same for the next iteration
       }

@@ -1,4 +1,4 @@
-import { parseBlockContents } from "./parseBlock.js"
+import { parseFileStatements } from "./parseBlock.js"
 
 // let failedToParse
 
@@ -12,7 +12,7 @@ const parse = tokenizer => {
   //   )
   // }
 
-  return parseBlockContents()
+  return parseFileStatements()
 }
 
 export { parse }

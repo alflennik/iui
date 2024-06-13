@@ -1,12 +1,18 @@
 import { parseStatement } from "./parseStatement.js"
 
-const parseBlockContents = () => {
+const parseStatements = detectEnd => {
   const statements = []
-  let statement
-  while ((statement = parseStatement())) {
-    statements.push(statement)
+  while (!detectEnd()) {
+    statements.push(parseStatement())
   }
   return statements
+}
+
+const parseFileStatements = () => {
+  const detectEnd = () => {
+    return tokenizer.matches([{ isEnd: true }])
+  }
+  return parseStatements(detectEnd)
 }
 
 // const parseBlockSpecial = parseContents => {
@@ -26,4 +32,4 @@ const parseBlockContents = () => {
 //   return parseBlockSpecial(parseBlockContents)
 // }
 
-export { parseBlockContents /* , parseBlockSpecial, parseBlock */ }
+export { parseFileStatements /* , parseBlockSpecial, parseBlock */ }
