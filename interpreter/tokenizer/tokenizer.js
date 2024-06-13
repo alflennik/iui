@@ -259,7 +259,7 @@ const getTokenizer = (code, { filePath, startingLineNumber = 1 } = {}) => {
     }
 
     if (character.match(/[ \t\n]/)) {
-      whitespace + character
+      whitespace += character
       advanceCharacters(1)
     }
   }
