@@ -1,0 +1,25 @@
+{
+  "name": "iui",
+  "displayName": "iui",
+  "description": "Official extension for the IUI programming language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.103.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "iui",
+      "aliases": ["iui", "iui"],
+      "extensions": ["iui","ion"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "iui",
+      "scopeName": "source.iui",
+      "path": "./syntaxes/iui.tmLanguage.json"
+    }]
+  }
+}
