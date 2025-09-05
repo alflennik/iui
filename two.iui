@@ -1,28 +1,26 @@
-test = (body<%>) {
-  body<%>.typeCheck(() { <!> })
-
-  expect = (result) {
-    toEqual = (comparison) {
-      if result != comparison : * error("\(result) did not equal \(comparison)") ;
+test = (name<String>, testBody<() => try await>) => {
+  expect = result => {
+    toEqual = comparison => {
+      if result != comparison, return createError("{result} did not equal {comparison}")
     }
-    * [toEqual:]
+    return [toEqual:]
   }
-  
-  expect.addToScopes()
-  
-  given body()<!> {
-    .error : log("the test failed") ;
-    .result : log ("the test passed") ;
-  }
+
+  addToScope(expect:)
+
+  try? catch await testBody().switch(
+    [.error]: (error) => {
+      log('[FAIL] {name}')
+      logError(error)
+    },
+    default: () => {
+      log('[PASS] {name}')
+    }
+  )
 }
 
-test(() {
-  log("starting test")
+test('operator precedence', () => {
+  result = 3 * (1 + 1) == 6 ? "fantastic" : "huh?"
 
-  result = if 3 * (1 + 1) == 6 { * "fantastic" } else { * "huh?" }
-
-  try expect(result).toEqual("fantastic")<!>
-
-  log("ending test")
+  try expect(result).toEqual("fantastic")
 })
-
