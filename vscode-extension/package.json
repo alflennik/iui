@@ -1,6 +1,9 @@
 {
   "name": "iui",
   "displayName": "iui",
+  "publisher": "iui",
+  "repository": "https://github.com/alflennik/iui",
+  "LICENSE": "MIT",
   "description": "Official extension for the IUI programming language",
   "version": "0.0.1",
   "engines": {
@@ -12,9 +15,13 @@
   "contributes": {
     "languages": [{
       "id": "iui",
-      "aliases": ["iui", "iui"],
-      "extensions": ["iui","ion"],
-      "configuration": "./language-configuration.json"
+      "aliases": [],
+      "extensions": ["iui"],
+      "configuration": "./language-configuration.json",
+      "icon": {
+        "light": "./iui-light.png",
+        "dark": "./iui-dark.png"
+      }
     }],
     "grammars": [{
       "language": "iui",
