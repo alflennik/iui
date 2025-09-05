@@ -3,7 +3,6 @@
   "displayName": "iui",
   "publisher": "iui",
   "repository": "https://github.com/alflennik/iui",
-  "LICENSE": "MIT",
   "description": "Official extension for the IUI programming language",
   "version": "0.0.1",
   "engines": {
