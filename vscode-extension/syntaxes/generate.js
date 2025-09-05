@@ -13,8 +13,12 @@ const generate = async () => {
         patterns: [
           {
             name: "keyword.control.iui",
+            match: "(?<![.a-zA-Z0-9])(if|else|while|for|await|continue|break|export|throw)\\b",
+          },
+          {
+            name: "keyword.control.iui",
             match:
-              "\\b(if|else|while|for|await|continue|break|export|\\*\\*\\*\\*\\*return|\\*\\*\\*\\*return|\\*\\*\\*return|\\*\\*return|\\*return|return)\\b",
+              "(?<![.a-zA-Z0-9])(\\*\\*\\*\\*\\*return|\\*\\*\\*\\*return|\\*\\*\\*return|\\*\\*return|\\*return|return)",
           },
           {
             name: "constant.numeric.iui",
@@ -28,7 +32,7 @@ const generate = async () => {
           { include: "#strings" },
           {
             name: "keyword.control.iui",
-            match: "(try\\?|try!|try)",
+            match: "(try\\?|try!|(?<!\\.)try)",
           },
           {
             name: "support.constant.iui",
@@ -39,13 +43,18 @@ const generate = async () => {
             match: "=>",
           },
           {
-            name: "keyword.control.iui",
-            match: "(<|>)",
+            name: "punctuation.definition.block.iui",
+            match: "(\\**{|})",
           },
           {
             // Couldn't find another way to get teal colors
             name: "constant.character.escape.iui",
-            match: "(=|\\+=|-=|\\*=|/=|&&|\\|\\|)",
+            match:
+              "(?<=\\s)(=|\\+=|-=|\\*=|\\/=|==|!=|&&|>|<|<=|>=|\\|\\||-|\\+|\\*|\\/|\\?|:)(?=\\s)",
+          },
+          {
+            name: "keyword.control.iui",
+            match: "(<|>)",
           },
           {
             name: "support.constant.iui",
@@ -69,6 +78,12 @@ const generate = async () => {
             // With the idea that what follows is probably a function
             name: "entity.name.function.iui",
             match: "&?[a-z][a-zA-Z0-9]*(?=\\s+=\\s+\\()",
+          },
+          {
+            // Also this:
+            // myVariable = blahblah =>
+            name: "entity.name.function.iui",
+            match: "&?[a-z][a-zA-Z0-9]*(?=\\s+=\\s+&?[a-z][a-zA-Z0-9]*\\s+=>)",
           },
           {
             name: "variable.other.object.js.iui",
@@ -128,8 +143,16 @@ const generate = async () => {
     ...output,
   }
 
+  let json = JSON.stringify(output, null, 2)
+
+  const indexOfWarning = json.indexOf('INSTEAD.",')
+  const jsonWithSomeDramaticWhitespace =
+    json.substring(0, indexOfWarning + 10) +
+    "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" +
+    json.substring(indexOfWarning + 10)
+
   const outputPath = path.resolve(__dirname, "iui.tmLanguage.json")
-  await fs.writeFile(outputPath, JSON.stringify(output, null, 2))
+  await fs.writeFile(outputPath, jsonWithSomeDramaticWhitespace)
 }
 
 generate()
