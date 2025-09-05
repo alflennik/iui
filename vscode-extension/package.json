@@ -1,12 +1,12 @@
 {
   "name": "iui",
-  "displayName": "iui",
+  "displayName": "Official Extension for the IUI Programming Language",
   "publisher": "iui",
   "repository": "https://github.com/alflennik/iui",
-  "description": "Official extension for the IUI programming language",
-  "version": "0.0.1",
+  "description": "Syntax highlighting for the iui programming language as well as file icons and code folding support.",
+  "version": "0.0.8",
   "engines": {
-    "vscode": "^1.103.0"
+    "vscode": "^1.99.3"
   },
   "categories": [
     "Programming Languages"

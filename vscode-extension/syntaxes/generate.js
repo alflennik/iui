@@ -13,7 +13,8 @@ const generate = async () => {
         patterns: [
           {
             name: "keyword.control.iui",
-            match: "(?<![.a-zA-Z0-9])(if|else|while|for|await|continue|break|export|throw)\\b",
+            match:
+              "(?<![.a-zA-Z0-9])(if|else|while|for|catch|await|continue|break|export|throw)\\b",
           },
           {
             name: "keyword.control.iui",
@@ -26,7 +27,7 @@ const generate = async () => {
           },
           {
             name: "support.constant.iui",
-            match: "(true|false)",
+            match: "(true|false|null)",
           },
           { include: "#comments" },
           { include: "#strings" },
