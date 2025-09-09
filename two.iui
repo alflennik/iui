@@ -8,7 +8,7 @@ test = (name<String>, testBody<() => try await>) => {
 
   addToScope(expect:)
 
-  try? catch await testBody().switch(
+  catch await testBody().switch(
     [.error]: (error) => {
       log('[FAIL] {name}')
       logError(error)
