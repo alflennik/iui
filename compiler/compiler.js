@@ -2,7 +2,7 @@ const fs = require("node:fs/promises")
 const path = require("path")
 
 const compile = async ast => {
-  const runtimePath = path.resolve(__dirname, "./runtime/runtime.js")
+  const runtimePath = path.resolve(__dirname, "./runtimeEnvironment/runtimeEnvironment.js")
   const runtimeFile = await fs.readFile(runtimePath, { encoding: "utf-8" })
 
   let output = ""
@@ -10,7 +10,7 @@ const compile = async ast => {
   const compileNode = astNode => {
     if (typeof astNode.content === "string" && astNode.content.startsWith(".name")) {
       const name = astNode.content.match(/\.name\((.+)\)/)[1]
-      return `runtime.variables["${name}"]`
+      return `runtimeEnvironment.variables["${name}"]`
     }
 
     if (typeof astNode.content === "string" && astNode.content.startsWith(".number")) {

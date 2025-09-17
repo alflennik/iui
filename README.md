@@ -17,5 +17,8 @@ The VSCode extension supports syntax highlighting and adds a file icon to iui fi
 - Run `vsce package`. This generates a .vsix file.
 - Upload the .vsix file to https://open-vsx.org/ so it appears in Cursor.
 
-### Extending the Runtime
-Since IUI is compiled to JS it might be necessary to add additional JS dependencies to the runtime. Any changes should be added to the compiler/scripts/rebuildJsRuntime.js script which builds the runtime/runtime.js file.
+## Runtime Environment
+
+### Development
+
+Any changes, including new dependencies, should be added to the compiler/generateRuntimeEnvironmentScript.js file. After running that file with Node it will build an updated runtimeEnvironment/runtimeEnvironment.js file.

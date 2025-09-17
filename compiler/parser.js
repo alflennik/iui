@@ -302,7 +302,8 @@ const parse = ({ lexemes, blockIds }) => {
     refreshNodeIndexesById()
   })
 
-  return astInProgress
+  ast = astInProgress
+  return ast
 }
 
 const getId = () => Math.random().toString().slice(2, 10)

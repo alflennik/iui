@@ -2,10 +2,7 @@ const parser = require("./parser")
 const compiler = require("./compiler")
 const path = require("node:path")
 const fs = require("node:fs/promises")
-const { exec, spawn } = require("node:child_process")
-const { promisify } = require("node:util")
-
-const execAsync = promisify(exec)
+const { spawn } = require("node:child_process")
 
 let [inputFilePath, outputFilePath] = (() => {
   let checked = 0
