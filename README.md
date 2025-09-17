@@ -21,4 +21,4 @@ The VSCode extension supports syntax highlighting and adds a file icon to iui fi
 
 ### Development
 
-Any changes, including new dependencies, should be added to the compiler/generateRuntimeEnvironmentScript.js file. After running that file with Node it will build an updated runtimeEnvironment/runtimeEnvironment.js file.
+Any changes, including new dependencies, should be added to the compiler/generateRuntimeEnvironment.js script. After running that file with Node it will build an updated runtimeEnvironment/runtimeEnvironment.js file.

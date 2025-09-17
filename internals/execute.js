@@ -1,5 +1,4 @@
-const parser = require("./parser")
-const compiler = require("./compiler")
+const compile = require("./compiler")
 const path = require("node:path")
 const fs = require("node:fs/promises")
 const { spawn } = require("node:child_process")
@@ -33,11 +32,9 @@ const processFile = async () => {
     process.exit(1)
   }
 
-  const contents = await fs.readFile(fullInputPath, { encoding: "utf-8" })
+  const sourceCode = await fs.readFile(fullInputPath, { encoding: "utf-8" })
 
-  const ast = parser.process(contents)
-
-  const js = await compiler(ast)
+  const js = compile(sourceCode)
 
   if (outputFilePath) {
     await fs.writeFile(outputFilePath, js, { encoding: "utf-8" })
