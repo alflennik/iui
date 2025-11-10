@@ -1,5 +1,13 @@
 # IUI Programming Language
 
+## IUI Command
+
+To run iui code, use a command like the following:
+
+```
+node iui one.iui
+```
+
 ## VSCode Extension
 
 The VSCode extension supports syntax highlighting and adds a file icon to iui files.
@@ -17,8 +25,8 @@ The VSCode extension supports syntax highlighting and adds a file icon to iui fi
 - Run `vsce package`. This generates a .vsix file.
 - Upload the .vsix file to https://open-vsx.org/ so it appears in Cursor.
 
-## Runtime Environment
+## Runtime
 
 ### Development
 
-Any changes, including new dependencies, should be added to the compiler/generateRuntimeEnvironment.js script. After running that file with Node it will build an updated runtimeEnvironment/runtimeEnvironment.js file.
+Any changes or new dependencies should be added to the compiler/generateRuntime.js script. After running that file with Node it will build an updated runtime/runtime.js file.

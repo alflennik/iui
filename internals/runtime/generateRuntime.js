@@ -1,4 +1,4 @@
-// Execute this file with Node in order to make changes to runtimeEnvironment.js
+// Execute this file with Node in order to make changes to runtime.js
 
 const fs = require("node:fs/promises")
 const path = require("node:path")
@@ -7,10 +7,10 @@ const { promisify } = require("node:util")
 
 const execAsync = promisify(exec)
 
-const runtimeEnvironmentFolderPath = path.resolve(__dirname)
-const tempFolderPath = path.join(runtimeEnvironmentFolderPath, "temp")
+const runtimeFolderPath = path.resolve(__dirname)
+const tempFolderPath = path.join(runtimeFolderPath, "temp")
 
-const generateRuntimeEnvironment = async () => {
+const generateRuntime = async () => {
   await deleteAllGeneratedFiles()
 
   await runCommand("npm init --yes")
@@ -32,18 +32,18 @@ const generateRuntimeEnvironment = async () => {
         log: console.log
       }
 
-      const runtimeEnvironment = {
+      const runtime = {
         variables,
         fpFromDecimal
       }
 
-      globalThis.runtimeEnvironment = runtimeEnvironment
+      globalThis.runtime = runtime
     `
   )
 
   await runCommand("./node_modules/.bin/esbuild index.js --bundle --outfile=bundled.js")
 
-  await runCommand("cp bundled.js ../runtimeEnvironment.js")
+  await runCommand("cp bundled.js ../runtime.js")
 
   await deleteTempFolder()
 
@@ -53,7 +53,7 @@ const generateRuntimeEnvironment = async () => {
 }
 
 const deleteAllGeneratedFiles = async () => {
-  await fs.rm(path.join(runtimeEnvironmentFolderPath, "runtimeEnvironment.js"))
+  await fs.rm(path.join(runtimeFolderPath, "runtime.js"))
   await fs.mkdir(tempFolderPath, { recursive: true })
 }
 
@@ -66,4 +66,4 @@ const runCommand = async command => {
   return stdout + stderr
 }
 
-generateRuntimeEnvironment()
+generateRuntime()

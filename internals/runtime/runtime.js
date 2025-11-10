@@ -491,9 +491,9 @@
   var variables = {
     log: console.log
   };
-  var runtimeEnvironment = {
+  var runtime = {
     variables,
     fpFromDecimal: import_fixed_point.fpFromDecimal
   };
-  globalThis.runtimeEnvironment = runtimeEnvironment;
+  globalThis.runtime = runtime;
 })();

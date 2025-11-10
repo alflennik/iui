@@ -1,4 +1,4 @@
-const compile = require("./compiler")
+const compile = require("./compiler/compiler")
 const path = require("node:path")
 const fs = require("node:fs/promises")
 const { spawn } = require("node:child_process")

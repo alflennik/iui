@@ -1,7 +1,7 @@
 const fs = require("node:fs")
 const path = require("path")
 
-const runtimePath = path.resolve(__dirname, "./runtimeEnvironment/runtimeEnvironment.js")
+const runtimePath = path.resolve(__dirname, "../runtime/runtime.js")
 const runtimeFile = fs.readFileSync(runtimePath, { encoding: "utf-8" })
 
 const generateCode = ast => {
@@ -10,16 +10,12 @@ const generateCode = ast => {
   const generateNode = astNode => {
     if (typeof astNode.content === "string" && astNode.content.startsWith(".name")) {
       const name = astNode.content.match(/\.name\((.+)\)/)[1]
-      return `runtimeEnvironment.variables["${name}"]`
+      return `runtime.variables["${name}"]`
     }
 
     if (typeof astNode.content === "string" && astNode.content.startsWith(".number")) {
       const number = astNode.content.match(/\.number\((.+)\)/)[1]
       return number
-    }
-
-    if (!astNode.content) {
-      console.log()
     }
 
     if (astNode.content[0] == ".string") {

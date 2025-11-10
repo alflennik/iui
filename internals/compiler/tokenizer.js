@@ -1,4 +1,4 @@
-const getId = require("./utilities/getId")
+const getId = require("../utilities/getId")
 
 const tokenize = sourceCode => {
   const matchers = [
