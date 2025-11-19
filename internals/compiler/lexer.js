@@ -14,18 +14,18 @@ const lex = tokens => {
     if (token.content.match(/^\s/)) continue // ignore whitespace now
 
     if (previousToken?.content != "." && token.content.match(/(await)/)) {
-      lexemes.push({ id: getId(), content: `.${token.content}` })
+      lexemes.push({ id: getId(), content: token.content })
       continue
     }
 
     if (token.content.match(/^[0-9]/)) {
       const withoutUnderscores = token.content.replace(/_/g, "")
-      lexemes.push({ id: getId(), content: `.number(${withoutUnderscores})` })
+      lexemes.push({ id: getId(), content: ["number", withoutUnderscores] })
       continue
     }
 
     if (token.content.match(/^&?[a-zA-Z0-9]+/)) {
-      lexemes.push({ id: getId(), content: `.name(${token.content})` })
+      lexemes.push({ id: getId(), content: ["name", token.content] })
       continue
     }
 
@@ -34,61 +34,61 @@ const lex = tokens => {
       const blockEndId = getId()
       blockIds[blockStartId] = blockEndId
       lexemes.push(
-        { id: blockStartId, content: ".stringStart" },
-        { id: getId(), content: `.stringContent(${token.content})` },
-        { id: blockEndId, content: ".stringEnd" }
+        { id: blockStartId, content: "stringStart" },
+        { id: getId(), content: ["stringContent", token.content] },
+        { id: blockEndId, content: "stringEnd" }
       )
       continue
     }
 
     if (token.content === "=") {
-      lexemes.push({ id: getId(), content: ".assign" })
+      lexemes.push({ id: getId(), content: "assign" })
       continue
     }
 
     if (token.content === "==") {
-      lexemes.push({ id: getId(), content: ".equals" })
+      lexemes.push({ id: getId(), content: "equals" })
       continue
     }
 
     if (token.content === "?") {
-      lexemes.push({ id: getId(), content: ".ternaryCondition" })
+      lexemes.push({ id: getId(), content: "ternaryCondition" })
       continue
     }
     if (token.content === ":" && previousToken.content?.match(/^\s/)) {
-      lexemes.push({ id: getId(), content: ".ternaryThen" })
+      lexemes.push({ id: getId(), content: "ternaryThen" })
       continue
     }
 
     if (token.content === "+") {
-      lexemes.push({ id: getId(), content: ".add" })
+      lexemes.push({ id: getId(), content: "add" })
       continue
     }
 
     if (token.content === "-") {
       if (nextToken?.match(/^\s/)) {
-        lexemes.push({ id: getId(), content: ".subtract" })
+        lexemes.push({ id: getId(), content: "subtract" })
         continue
       }
-      lexemes.push({ id: getId(), content: ".negate" })
+      lexemes.push({ id: getId(), content: "negate" })
       continue
     }
 
     if (token.content === "*") {
-      lexemes.push({ id: getId(), content: ".multiply" })
+      lexemes.push({ id: getId(), content: "multiply" })
       continue
     }
 
     if (token.content === "(") {
       const id = getId()
-      if (previousLexeme && !previousLexeme.content.startsWith(".name")) {
-        openBlocks.push([id, ".parenthesesStart"])
-        lexemes.push({ id, content: ".parenthesesStart" })
+      if (previousLexeme && previousLexeme.content[0] !== "name") {
+        openBlocks.push([id, "parenthesesStart"])
+        lexemes.push({ id, content: "parenthesesStart" })
         continue
       } else {
-        lexemes.push({ id: getId(), content: ".call" })
-        lexemes.push({ id, content: ".argumentsStart" })
-        openBlocks.push([id, ".argumentsStart"])
+        lexemes.push({ id: getId(), content: "call" })
+        lexemes.push({ id, content: "argumentsStart" })
+        openBlocks.push([id, "argumentsStart"])
         continue
       }
     }
@@ -100,11 +100,11 @@ const lex = tokens => {
 
       blockIds[blockStartId] = id
 
-      if (blockOpenedAs === ".parenthesesStart") {
-        lexemes.push({ id, content: ".parenthesesEnd" })
+      if (blockOpenedAs === "parenthesesStart") {
+        lexemes.push({ id, content: "parenthesesEnd" })
         continue
       } else {
-        lexemes.push({ id, content: ".argumentsEnd" })
+        lexemes.push({ id, content: "argumentsEnd" })
         continue
       }
     }

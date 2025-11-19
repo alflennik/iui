@@ -3,15 +3,15 @@ const getId = require("../utilities/getId")
 const parse = ({ lexemes, blockIds }) => {
   const matchersInOrderOfPrecedence = [
     { match: /Start$/, isBlock: true },
-    { match: /^(\.name|\.number)/, ignoreForPrecedence: true },
-    { match: /^\.stringContent/, ignoreForPrecedence: true },
-    { match: /^\.assign$/ },
-    { match: /^\.ternaryCondition$/ },
-    { match: /^\.ternaryThen$/ },
-    { match: /^\.equals$/ },
-    { match: /^\.add$/ },
-    { match: /^\.multiply$/ },
-    { match: /^\.call$/ },
+    { match: /^(name|number)/, ignoreForPrecedence: true },
+    { match: /^stringContent/, ignoreForPrecedence: true },
+    { match: /^assign$/ },
+    { match: /^ternaryCondition$/ },
+    { match: /^ternaryThen$/ },
+    { match: /^equals$/ },
+    { match: /^add$/ },
+    { match: /^multiply$/ },
+    { match: /^call$/ },
   ]
 
   const lexemeIdsByPrecedence = {}
@@ -26,7 +26,9 @@ const parse = ({ lexemes, blockIds }) => {
       const matcher = matchersInOrderOfPrecedence[j]
       const precedenceIndex = j
 
-      const match = lexeme.content.match(matcher.match)
+      const lexemeContent = typeof lexeme.content === "string" ? lexeme.content : lexeme.content[0]
+
+      const match = lexemeContent.match(matcher.match)
       if (match) {
         if (matcher.ignoreForPrecedence === true) {
           continue lexemeLoop
@@ -61,11 +63,11 @@ const parse = ({ lexemes, blockIds }) => {
   nestedBlocks.forEach(nestedBlock => {
     const { startId, blockContents } = nestedBlock
     const startIndex = nodeIndexesById[startId]
-    const blockName = sourceTreeInProgress[startIndex].content.match(/^\.(.+)Start$/)[1]
+    const blockName = sourceTreeInProgress[startIndex].content.match(/^(.+)Start$/)[1]
 
     const blockSourceTreeNodes = parse({ lexemes: blockContents.slice(1, -1), blockIds })
 
-    const sourceTreeNode = { id: startId, content: [`.${blockName}`, blockSourceTreeNodes] }
+    const sourceTreeNode = { id: startId, content: [blockName, blockSourceTreeNodes] }
 
     sourceTreeInProgress.splice(startIndex, blockContents.length, sourceTreeNode)
     refreshNodeIndexesById()
@@ -74,13 +76,13 @@ const parse = ({ lexemes, blockIds }) => {
   const lexemesIdsInProcessOrder = Object.values(lexemeIdsByPrecedence).reverse()
 
   const operatorTypes = {
-    ".assign": "midfixBinary",
-    ".ternaryCondition": "ternaryCondition",
-    ".ternaryThen": "ternaryThen",
-    ".multiply": "midfixBinary",
-    ".add": "midfixBinary",
-    ".equals": "midfixBinary",
-    ".call": "midfixBinary",
+    assign: "midfixBinary",
+    ternaryCondition: "ternaryCondition",
+    ternaryThen: "ternaryThen",
+    multiply: "midfixBinary",
+    add: "midfixBinary",
+    equals: "midfixBinary",
+    call: "midfixBinary",
   }
 
   lexemesIdsInProcessOrder.forEach(id => {
@@ -101,11 +103,11 @@ const parse = ({ lexemes, blockIds }) => {
       sourceTreeNodes = [
         {
           id,
-          content: [".then", [sourceTreeInProgress[index - 1]]],
+          content: ["then", [sourceTreeInProgress[index - 1]]],
         },
         {
           id: getId(),
-          content: [".else", [sourceTreeInProgress[index + 1]]],
+          content: ["else", [sourceTreeInProgress[index + 1]]],
         },
       ]
       sourceTreeInProgress.splice(index - 1, 3, ...sourceTreeNodes)
@@ -114,11 +116,11 @@ const parse = ({ lexemes, blockIds }) => {
       sourceTreeNode = {
         id,
         content: [
-          ".ternary",
+          "ternary",
           [
             {
               id: getId(),
-              content: [".condition", [sourceTreeInProgress[index - 1]]],
+              content: ["condition", [sourceTreeInProgress[index - 1]]],
             },
             sourceTreeInProgress[index + 1],
             sourceTreeInProgress[index + 2],
@@ -133,7 +135,7 @@ const parse = ({ lexemes, blockIds }) => {
     refreshNodeIndexesById()
   })
 
-  sourceTree = sourceTreeInProgress
+  const sourceTree = sourceTreeInProgress
   return sourceTree
 }
 
