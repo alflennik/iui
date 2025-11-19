@@ -1,55 +1,13 @@
-const lex = require("./lexer")
-const tokenize = require("./tokenizer")
+const getId = require("../utilities/getId")
 
-const parse = sourceCode => {
-  // console.log(sourceCode)
-  const tokens = tokenize(sourceCode)
-  // console.log(tokens.map(token => token.content).join("•"))
-  const { lexemes, blockIds } = lex(tokens)
-  // console.log(JSON.stringify(lexemes))
-  // console.log(lexemes.map(lexeme => lexeme.content).join("•"))
-
-  const prettyFormatAst = (nodes, indentLevel = 0) => {
-    let whitespace = ""
-    for (i = 0; i < indentLevel; i += 1) {
-      whitespace += "  "
-    }
-
-    return nodes
-      .map(node => {
-        if (Array.isArray(node.content)) {
-          const name = node.content[0]
-          const childrenRaw = node.content[1]
-
-          let childrenFormatted
-          if (Array.isArray(childrenRaw)) {
-            childrenFormatted = prettyFormatAst(childrenRaw, indentLevel + 1)
-          } else if (childrenRaw == null) {
-            childrenFormatted = ""
-          } else {
-            childrenFormatted = childrenRaw
-          }
-
-          return `${whitespace}${name}(\n${childrenFormatted}\n${whitespace})`
-        }
-        return `${whitespace}${node.content}`
-      })
-      .join("\n")
-  }
-  const ast = parseOperators({ lexemes, blockIds })
-  // console.log(prettyFormatAst(ast))
-  // console.log()
-  return ast
-}
-
-const parseOperators = ({ lexemes, blockIds }) => {
+const parse = ({ lexemes, blockIds }) => {
   const matchersInOrderOfPrecedence = [
     { match: /Start$/, isBlock: true },
     { match: /^(\.name|\.number)/, ignoreForPrecedence: true },
     { match: /^\.stringContent/, ignoreForPrecedence: true },
     { match: /^\.assign$/ },
-    { match: /^\.ternaryIf$/ },
-    { match: /^\.ternaryElse$/ },
+    { match: /^\.ternaryCondition$/ },
+    { match: /^\.ternaryThen$/ },
     { match: /^\.equals$/ },
     { match: /^\.add$/ },
     { match: /^\.multiply$/ },
@@ -92,24 +50,24 @@ const parseOperators = ({ lexemes, blockIds }) => {
     throw new Error("Unrecognized lexeme")
   }
 
-  let astInProgress = deepClone(lexemes)
+  let sourceTreeInProgress = deepClone(lexemes)
 
   let nodeIndexesById
   const refreshNodeIndexesById = () => {
-    nodeIndexesById = Object.fromEntries(astInProgress.map(({ id }, index) => [id, index]))
+    nodeIndexesById = Object.fromEntries(sourceTreeInProgress.map(({ id }, index) => [id, index]))
   }
   refreshNodeIndexesById()
 
   nestedBlocks.forEach(nestedBlock => {
     const { startId, blockContents } = nestedBlock
     const startIndex = nodeIndexesById[startId]
-    const blockName = astInProgress[startIndex].content.match(/^\.(.+)Start$/)[1]
+    const blockName = sourceTreeInProgress[startIndex].content.match(/^\.(.+)Start$/)[1]
 
-    const blockAstNodes = parseOperators({ lexemes: blockContents.slice(1, -1), blockIds })
+    const blockSourceTreeNodes = parse({ lexemes: blockContents.slice(1, -1), blockIds })
 
-    const astNode = { id: startId, content: [`.${blockName}`, blockAstNodes] }
+    const sourceTreeNode = { id: startId, content: [`.${blockName}`, blockSourceTreeNodes] }
 
-    astInProgress.splice(startIndex, blockContents.length, astNode)
+    sourceTreeInProgress.splice(startIndex, blockContents.length, sourceTreeNode)
     refreshNodeIndexesById()
   })
 
@@ -117,8 +75,8 @@ const parseOperators = ({ lexemes, blockIds }) => {
 
   const operatorTypes = {
     ".assign": "midfixBinary",
-    ".ternaryIf": "midfixBinary",
-    ".ternaryElse": "midfixBinary",
+    ".ternaryCondition": "ternaryCondition",
+    ".ternaryThen": "ternaryThen",
     ".multiply": "midfixBinary",
     ".add": "midfixBinary",
     ".equals": "midfixBinary",
@@ -127,23 +85,56 @@ const parseOperators = ({ lexemes, blockIds }) => {
 
   lexemesIdsInProcessOrder.forEach(id => {
     const index = nodeIndexesById[id]
-    const lexeme = astInProgress[index]
-    let astNode
+    const lexeme = sourceTreeInProgress[index]
+    let sourceTreeNode
     if (operatorTypes[lexeme.content] === "midfixBinary") {
-      astNode = {
+      sourceTreeNode = {
         id,
-        content: [lexeme.content, [astInProgress[index - 1], astInProgress[index + 1]]],
+        content: [
+          lexeme.content,
+          [sourceTreeInProgress[index - 1], sourceTreeInProgress[index + 1]],
+        ],
       }
-    }
-    if (!astNode) {
+      sourceTreeInProgress.splice(index - 1, 3, sourceTreeNode)
+    } else if (operatorTypes[lexeme.content] === "ternaryThen") {
+      // ternaryThen parses before ternaryCondition
+      sourceTreeNodes = [
+        {
+          id,
+          content: [".then", [sourceTreeInProgress[index - 1]]],
+        },
+        {
+          id: getId(),
+          content: [".else", [sourceTreeInProgress[index + 1]]],
+        },
+      ]
+      sourceTreeInProgress.splice(index - 1, 3, ...sourceTreeNodes)
+    } else if (operatorTypes[lexeme.content] === "ternaryCondition") {
+      // Note: ternaryThen has already parsed
+      sourceTreeNode = {
+        id,
+        content: [
+          ".ternary",
+          [
+            {
+              id: getId(),
+              content: [".condition", [sourceTreeInProgress[index - 1]]],
+            },
+            sourceTreeInProgress[index + 1],
+            sourceTreeInProgress[index + 2],
+          ],
+        ],
+      }
+
+      sourceTreeInProgress.splice(index - 1, 4, sourceTreeNode)
+    } else {
       throw new Error("Failed to process operator")
     }
-    astInProgress.splice(index - 1, 3, astNode)
     refreshNodeIndexesById()
   })
 
-  ast = astInProgress
-  return ast
+  sourceTree = sourceTreeInProgress
+  return sourceTree
 }
 
 const deepClone = data => JSON.parse(JSON.stringify(data))

@@ -493,7 +493,10 @@
   };
   var runtime = {
     variables,
-    fpFromDecimal: import_fixed_point.fpFromDecimal
+    fpFromDecimal: import_fixed_point.fpFromDecimal,
+    execute: () => {
+      console.log("hello from runtime");
+    }
   };
   globalThis.runtime = runtime;
 })();

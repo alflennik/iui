@@ -34,10 +34,23 @@ const processFile = async () => {
 
   const sourceCode = await fs.readFile(fullInputPath, { encoding: "utf-8" })
 
-  const js = compile(sourceCode)
+  const sourceTree = compile(sourceCode)
+
+  const runtime = await fs.readFile(path.resolve(__dirname, "./runtime/runtime.js"), {
+    encoding: "utf-8",
+  })
+
+  const js = `
+    const sourceTree = ${JSON.stringify(sourceTree, null, 2)};
+
+    ${runtime};
+
+    runtime.execute(sourceTree)
+  `
 
   if (outputFilePath) {
-    await fs.writeFile(outputFilePath, js, { encoding: "utf-8" })
+    throw new Error("Not implemented")
+    // await fs.writeFile(outputFilePath, js, { encoding: "utf-8" })
   } else {
     await new Promise(resolve => {
       const child = spawn("node", ["-e", js], {

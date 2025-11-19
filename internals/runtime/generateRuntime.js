@@ -23,22 +23,9 @@ const generateRuntime = async () => {
 
   console.info("bundling runtime environment")
 
-  await fs.writeFile(
-    path.join(tempFolderPath, "./index.js"),
-    `
-      import { fpFromDecimal } from "@hastom/fixed-point"
-
-      const variables = {
-        log: console.log
-      }
-
-      const runtime = {
-        variables,
-        fpFromDecimal
-      }
-
-      globalThis.runtime = runtime
-    `
+  await fs.copyFile(
+    path.join(runtimeFolderPath, "./src/index.js"),
+    path.join(tempFolderPath, "./index.js")
   )
 
   await runCommand("./node_modules/.bin/esbuild index.js --bundle --outfile=bundled.js")

@@ -52,11 +52,11 @@ const lex = tokens => {
     }
 
     if (token.content === "?") {
-      lexemes.push({ id: getId(), content: ".ternaryIf" })
+      lexemes.push({ id: getId(), content: ".ternaryCondition" })
       continue
     }
     if (token.content === ":" && previousToken.content?.match(/^\s/)) {
-      lexemes.push({ id: getId(), content: ".ternaryElse" })
+      lexemes.push({ id: getId(), content: ".ternaryThen" })
       continue
     }
 
