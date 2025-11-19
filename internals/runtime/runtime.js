@@ -488,15 +488,118 @@
 
   // index.js
   var import_fixed_point = __toESM(require_dist());
-  var variables = {
+  var officialPrecision = 18;
+  var extraDigitsOfHiddenPrecision = 1;
+  var internalPrecision = officialPrecision + extraDigitsOfHiddenPrecision;
+  var scopeVars = {
+    console,
     log: console.log
   };
-  var runtime = {
-    variables,
-    fpFromDecimal: import_fixed_point.fpFromDecimal,
-    execute: () => {
-      console.log("hello from runtime");
+  var core = {
+    name: (nameString) => {
+      return {
+        nameString,
+        get: () => scopeVars[nameString],
+        createForAssignment: () => nameString
+      };
+    },
+    read: (node1, node2) => {
+      const name1 = execute(node1);
+      const name2 = execute(node2);
+      return scopeVars[name1.nameString][name2.nameString];
+    },
+    add: (node1, node2) => {
+      const result1 = execute(node1);
+      const result2 = execute(node2);
+      return result1.add(result2);
+    },
+    multiply: (node1, node2) => {
+      const result1 = execute(node1);
+      const result2 = execute(node2);
+      return result1.mul(result2);
+    },
+    number: (numberValue) => {
+      return (0, import_fixed_point.fpFromDecimal)(numberValue, internalPrecision);
+    },
+    equals: (node1, node2) => {
+      const result1 = execute(node1);
+      const result2 = execute(node2);
+      return result1.eq(result2);
+    },
+    function: (parametersNode, statementsNode) => {
+      return (args) => {
+        execute(["parameters", args, ...parametersNode.slice(1)]);
+        execute(statementsNode);
+      };
+    },
+    parameters: (args, ...nodes) => {
+      nodes.forEach((node, index) => {
+        execute(["assign", node, ["rawValue", args[index]]]);
+      });
+    },
+    statements: (...nodes) => {
+      nodes.forEach((node) => {
+        execute(node);
+      });
+    },
+    call: (nameNode, argumentsNode) => {
+      const args = execute(argumentsNode);
+      const functionValue = execute(nameNode);
+      let functionCallable;
+      if (functionValue.nameString) {
+        functionCallable = functionValue.get();
+      } else {
+        functionCallable = functionValue;
+      }
+      const extracted = args.map((arg) => arg.nameString ? arg.get() : arg);
+      functionCallable(extracted);
+    },
+    arguments: (...nodes) => {
+      const results = nodes.map((node) => execute(node));
+      return results;
+    },
+    assign: (node1, node2) => {
+      const name = execute(node1);
+      value = execute(node2);
+      scopeVars[name.nameString] = value;
+      return value;
+    },
+    ternary: (node1, node2, node3) => {
+      const name = execute(node1[1]);
+      if (name.nameString && name.get() || name) {
+        return execute(node2[1]);
+      } else {
+        return execute(node3[1]);
+      }
+    },
+    parentheses: (node1) => {
+      return execute(node1);
+    },
+    rawValue: (arbitraryData) => {
+      return arbitraryData;
+    },
+    string: (...nodes) => {
+      let output = "";
+      nodes.forEach((node) => {
+        if (node[0] === "stringContent") {
+          output += node[1];
+        } else if (node[0] === "stringReplacement") {
+          const name = execute(node[1]);
+          output += name.get();
+        }
+      });
+      return output;
     }
+  };
+  var execute = (node) => {
+    const coreFunction = core[node[0]];
+    if (!coreFunction) throw new Error(`Invalid Syntax at ${node[0]}`);
+    return coreFunction(...node.slice(1));
+  };
+  var runtime = {
+    // variables,
+    // fpFromDecimal,
+    execute
   };
   globalThis.runtime = runtime;
 })();

@@ -4,10 +4,15 @@ const tokenize = sourceCode => {
   const matchers = [
     // strings
     { match: /^"[^"]*"/ },
-    // any names, numbers, type name or keywords
-    { match: /^&?[a-zA-Z0-9]+/ },
-    // also numbers can include underscores (not at the beginning or end)
-    { match: /^[0-9][0-9_]*[0-9]+/ },
+    // any names, type name or keywords
+    { match: /^&?[a-zA-Z][a-zA-Z0-9]*/ },
+    // numbers which can include underscores (not at the beginning or end) and one dot (not at end)
+    // No underscores next to the dot
+    { match: /^\d[\d_]+\d\.\d[\d_]+\d/ }, // dot and underscores on both sides
+    { match: /^\d[\d_]+\d\.\d/ }, // dot and underscores on left
+    { match: /^\d*\.\d[\d_]+\d/ }, // dot and underscores on right
+    { match: /^\d*\.\d+/ }, // dot at beginning or middle
+    { match: /^\d+/ },
     // symbols that aren't whitespace sensitive
     { match: /^[\[\]\(\):]/ },
     // symbols that are whitespace sensitive
@@ -36,9 +41,13 @@ const tokenize = sourceCode => {
       }
     }
 
-    if (!success) throw new Error("Unexpected character encountered")
+    if (!success) {
+      throw new Error("Unexpected character encountered")
+    }
 
-    if (safetySwitch > 100_000) throw new Error("Infinite loop detected")
+    if (safetySwitch > 100_000) {
+      throw new Error("Infinite loop detected")
+    }
   }
 
   if (remainingSourceCode) {

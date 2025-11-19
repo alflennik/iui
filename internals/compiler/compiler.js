@@ -22,50 +22,30 @@ const compile = sourceCode => {
   )
   const sourceTree = parse({ lexemes, blockIds })
 
-  const stripIds = sourceTreeNode => {
-    if (sourceTreeNode.content) {
-      return [
-        sourceTreeNode.content[0],
-        ...sourceTreeNode.content.slice(1).map(sourceTreeNode => stripIds(sourceTreeNode)),
-      ]
-    }
-    return sourceTreeNode
-  }
-  const sourceTreeClean = sourceTree.map(node => stripIds(node))
-
   console.log(JSON.stringify(sourceTree, null, 2))
   console.log(prettyFormatSourceTree(sourceTree))
 
   return sourceTree
 }
 
-const prettyFormatSourceTree = (nodes, indentLevel = 0) => {
+const prettyFormatSourceTree = (node, indentLevel = 0) => {
   let whitespace = ""
   for (i = 0; i < indentLevel; i += 1) {
     whitespace += "  "
   }
 
-  return nodes
-    .map(node => {
-      const isDeepestNode = !node.content?.[1]?.[0]?.id
-      if (isDeepestNode) {
-        return `${whitespace}.${node.content[0]}(${node.content[1]})`
-      }
-      const name = node.content[0]
-      const childrenRaw = node.content[1]
+  const isDeepestNode = !Array.isArray(node[1])
+  if (isDeepestNode) {
+    return `${whitespace}.${node[0]}(${node[1]})`
+  }
+  const name = node[0]
+  const childrenRaw = node.slice(1)
 
-      let childrenFormatted
-      if (Array.isArray(childrenRaw)) {
-        childrenFormatted = prettyFormatSourceTree(childrenRaw, indentLevel + 1)
-      } else if (childrenRaw == null) {
-        childrenFormatted = ""
-      } else {
-        childrenFormatted = childrenRaw
-      }
-
-      return `${whitespace}.${name}(\n${childrenFormatted}\n${whitespace})`
-    })
+  const childrenFormatted = childrenRaw
+    .map(childRaw => prettyFormatSourceTree(childRaw, indentLevel + 1))
     .join("\n")
+
+  return `${whitespace}.${name}(\n${childrenFormatted}\n${whitespace})`
 }
 
 module.exports = compile

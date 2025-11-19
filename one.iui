@@ -1,2 +1,2 @@
-result = 3 * (1 + 1) == 6 ? "fantastic" : "huh?"
+result = 3 * (0.1 + 0.2) == 0.9 ? "fantastic" : "huh?"
 log(result)

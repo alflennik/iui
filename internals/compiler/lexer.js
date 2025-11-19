@@ -5,6 +5,9 @@ const lex = tokens => {
   const openBlocks = []
   const blockIds = {}
 
+  const startId = getId()
+  lexemes.push({ id: startId, content: "statementsStart" })
+
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i]
     const previousToken = tokens[i - 1]
@@ -111,6 +114,10 @@ const lex = tokens => {
 
     throw new Error("Failed to process syntax")
   }
+
+  const endId = getId()
+  blockIds[startId] = endId
+  lexemes.push({ id: endId, content: "statementsEnd" })
 
   return { lexemes, blockIds }
 }
