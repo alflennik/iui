@@ -1,6 +1,7 @@
 import { fpFromDecimal } from "@hastom/fixed-point"
+import getRandomNumber from "crypto-random"
 
-// A BigInt can have up to 19 decimal digits and fit into 64 bits of value storage.
+// A BigInt can have up to 19 decimal digits fit into 64 bits of value storage
 const officialPrecision = 18 // largest possible number is 999 quadrillion
 
 // Enables digits of rounding, so 1/3 + 1/3 + 1/3 = 1 instead of 0.9999999
@@ -15,16 +16,13 @@ const scopeVars = {
 
 const core = {
   name: nameString => {
-    return {
-      nameString,
-      get: () => scopeVars[nameString],
-      createForAssignment: () => nameString,
-    }
+    return scopeVars[nameString]
   },
   read: (node1, node2) => {
-    const name1 = execute(node1)
-    const name2 = execute(node2)
-    return scopeVars[name1.nameString][name2.nameString]
+    const object = execute(node1)
+    if (node2[0] !== "name") throw new Error("Syntax error")
+    const name = node2[1]
+    return object[name]
   },
   add: (node1, node2) => {
     const result1 = execute(node1)
@@ -63,29 +61,23 @@ const core = {
   call: (nameNode, argumentsNode) => {
     const args = execute(argumentsNode)
     const functionValue = execute(nameNode)
-    let functionCallable
-    if (functionValue.nameString) {
-      functionCallable = functionValue.get()
-    } else {
-      functionCallable = functionValue
-    }
-    const extracted = args.map(arg => (arg.nameString ? arg.get() : arg))
-    functionCallable(extracted)
+    functionValue(args)
   },
   arguments: (...nodes) => {
     const results = nodes.map(node => execute(node))
     return results
   },
   assign: (node1, node2) => {
-    const name = execute(node1)
+    if (node1[0] !== "name") throw new Error("Syntax error")
+    const nameString = node1[1]
     value = execute(node2)
 
-    scopeVars[name.nameString] = value
+    scopeVars[nameString] = value
     return value
   },
   ternary: (node1, node2, node3) => {
-    const name = execute(node1[1])
-    if ((name.nameString && name.get()) || name) {
+    const condition = execute(node1[1])
+    if (condition) {
       return execute(node2[1])
     } else {
       return execute(node3[1])
@@ -103,11 +95,13 @@ const core = {
       if (node[0] === "stringContent") {
         output += node[1]
       } else if (node[0] === "stringReplacement") {
-        const name = execute(node[1])
-        output += name.get()
+        output += execute(node[1])
       }
     })
     return output
+  },
+  getRandomNumber: () => {
+    return fpFromDecimal(getRandomNumber())
   },
 }
 
@@ -150,6 +144,27 @@ const runtime = {
 //   ],
 //   ["call", ["name", "log"], ["arguments", ["name", "result"]]],
 // ]
+
+/* prettier-ignore */
+// const compiled = (
+//   ["statements",
+//     ["assign",
+//       ["name", "greet"],
+//       ["function",
+//         ["parameters", ["name", "nameString"]],
+//         ["statements",
+//           ["call",
+//             ["read", ["name", "console"], ["name", "log"]],
+//             ["arguments",
+//               ["string", ["stringText", "hello, "], ["stringReplacement", ["name", "nameString"]]],
+//             ],
+//           ],
+//         ]
+//       ],
+//     ],
+//     ["call", ["name", "greet"], ["arguments", ["string", ["stringText", "Philonius"]]]]
+//   ]
+// )
 //
 // execute(compiled)
 

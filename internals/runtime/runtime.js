@@ -5,7 +5,13 @@
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __commonJS = (cb, mod) => function __require() {
+  var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
+    get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
+  }) : x)(function(x) {
+    if (typeof require !== "undefined") return require.apply(this, arguments);
+    throw Error('Dynamic require of "' + x + '" is not supported');
+  });
+  var __commonJS = (cb, mod) => function __require2() {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   };
   var __copyProps = (to, from, except, desc) => {
@@ -486,8 +492,61 @@
     }
   });
 
+  // node_modules/crypto-random/random.js
+  var require_random = __commonJS({
+    "node_modules/crypto-random/random.js"(exports, module) {
+      var Random = class {
+        /**
+         * Generate a random number between 0 (inclusive) and 1 (exclusive).
+         * A drop in replacement for Math.random()
+         * @return {number}
+         */
+        static value() {
+          if (typeof window !== "undefined" && (window.crypto || window.msCrypto)) {
+            return this._getBrowserRandomValue();
+          } else {
+            return this._getNodeRandomValue();
+          }
+        }
+        /**
+         * Generate a random number between min (inclusive) and max (exclusive).
+         * @param  {number} min
+         * @param  {number} max
+         * @return {number}
+         */
+        static range(min, max) {
+          return Math.floor(this.value() * (max - min) + min);
+        }
+        /**
+         * Get a random number between 0 (inclusive) and 1 (exclusive) using Node Crypto.
+         * @return  {number}
+         * @private
+         */
+        static _getNodeRandomValue() {
+          const crypto = __require("crypto");
+          const buffer = crypto.randomBytes(8);
+          const number = parseInt(buffer.toString("hex"), 16);
+          return number / Math.pow(2, 64);
+        }
+        /**
+         * Get a random number between 0 (inclusive) and 1 (exclusive) using window.crypto.
+         * @return  {number}
+         * @private
+         */
+        static _getBrowserRandomValue() {
+          const crypto = window.crypto || window.msCrypto;
+          const randomValues = new Uint32Array(1);
+          crypto.getRandomValues(randomValues);
+          return randomValues[0] / Math.pow(2, 32);
+        }
+      };
+      module.exports = Random;
+    }
+  });
+
   // index.js
   var import_fixed_point = __toESM(require_dist());
+  var import_crypto_random = __toESM(require_random());
   var officialPrecision = 18;
   var extraDigitsOfHiddenPrecision = 1;
   var internalPrecision = officialPrecision + extraDigitsOfHiddenPrecision;
@@ -497,16 +556,13 @@
   };
   var core = {
     name: (nameString) => {
-      return {
-        nameString,
-        get: () => scopeVars[nameString],
-        createForAssignment: () => nameString
-      };
+      return scopeVars[nameString];
     },
     read: (node1, node2) => {
-      const name1 = execute(node1);
-      const name2 = execute(node2);
-      return scopeVars[name1.nameString][name2.nameString];
+      const object = execute(node1);
+      if (node2[0] !== "name") throw new Error("Syntax error");
+      const name = node2[1];
+      return object[name];
     },
     add: (node1, node2) => {
       const result1 = execute(node1);
@@ -545,28 +601,22 @@
     call: (nameNode, argumentsNode) => {
       const args = execute(argumentsNode);
       const functionValue = execute(nameNode);
-      let functionCallable;
-      if (functionValue.nameString) {
-        functionCallable = functionValue.get();
-      } else {
-        functionCallable = functionValue;
-      }
-      const extracted = args.map((arg) => arg.nameString ? arg.get() : arg);
-      functionCallable(extracted);
+      functionValue(args);
     },
     arguments: (...nodes) => {
       const results = nodes.map((node) => execute(node));
       return results;
     },
     assign: (node1, node2) => {
-      const name = execute(node1);
+      if (node1[0] !== "name") throw new Error("Syntax error");
+      const nameString = node1[1];
       value = execute(node2);
-      scopeVars[name.nameString] = value;
+      scopeVars[nameString] = value;
       return value;
     },
     ternary: (node1, node2, node3) => {
-      const name = execute(node1[1]);
-      if (name.nameString && name.get() || name) {
+      const condition = execute(node1[1]);
+      if (condition) {
         return execute(node2[1]);
       } else {
         return execute(node3[1]);
@@ -584,11 +634,13 @@
         if (node[0] === "stringContent") {
           output += node[1];
         } else if (node[0] === "stringReplacement") {
-          const name = execute(node[1]);
-          output += name.get();
+          output += execute(node[1]);
         }
       });
       return output;
+    },
+    getRandomNumber: () => {
+      return (0, import_fixed_point.fpFromDecimal)((0, import_crypto_random.default)());
     }
   };
   var execute = (node) => {

@@ -1,4 +1,4 @@
-test = (name<String>, testBody<() => try await>) => {
+test = (name<String>, testBody<() => try await null>) => {
   expect = result => {
     toEqual = comparison => {
       if result != comparison, return createError("{result} did not equal {comparison}")

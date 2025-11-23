@@ -13,34 +13,41 @@ const tempFolderPath = path.join(runtimeFolderPath, "temp")
 const generateRuntime = async () => {
   await deleteAllGeneratedFiles()
 
-  await runCommand("npm init --yes")
+  try {
+    await runCommand("npm init --yes")
 
-  console.info("installing @hastom/fixed-point")
-  await runCommand("npm i @hastom/fixed-point")
-  console.info("installing esbuild")
-  await runCommand("npm i esbuild")
-  await runCommand("./node_modules/.bin/esbuild --version") // check it works
+    console.info("installing @hastom/fixed-point")
+    await runCommand("npm i @hastom/fixed-point")
+    console.info("installing crypto-random")
+    await runCommand("npm i crypto-random")
+    console.info("installing esbuild")
+    await runCommand("npm i esbuild")
+    await runCommand("./node_modules/.bin/esbuild --version") // check it works
 
-  console.info("bundling runtime environment")
+    console.info("bundling runtime environment")
 
-  await fs.copyFile(
-    path.join(runtimeFolderPath, "./src/index.js"),
-    path.join(tempFolderPath, "./index.js")
-  )
+    await fs.copyFile(
+      path.join(runtimeFolderPath, "./src/index.js"),
+      path.join(tempFolderPath, "./index.js")
+    )
 
-  await runCommand("./node_modules/.bin/esbuild index.js --bundle --outfile=bundled.js")
+    await runCommand(
+      "./node_modules/.bin/esbuild index.js --bundle --outfile=bundled.js --external:crypto"
+    )
 
-  await runCommand("cp bundled.js ../runtime.js")
-
-  await deleteTempFolder()
+    await runCommand("cp bundled.js ../runtime.js")
+  } catch (error) {
+    console.error(error)
+  } finally {
+    await deleteTempFolder()
+  }
 
   console.info("done.")
-
   // console.log("success", success, "output", output)
 }
 
 const deleteAllGeneratedFiles = async () => {
-  await fs.rm(path.join(runtimeFolderPath, "runtime.js"))
+  await fs.rm(path.join(runtimeFolderPath, "runtime.js"), { force: true })
   await fs.mkdir(tempFolderPath, { recursive: true })
 }
 

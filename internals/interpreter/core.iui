@@ -1,0 +1,12 @@
+// scope = *{
+//   &scopeId<!>
+//   *return [
+//     enter: () => {
+//       &scopeId = "{getRandomNumberBetween(100_000_000, 999_999_999)}"
+//     }
+//     add: (nameString, memoryObject) => {
+//       bootstrap.reference(nameString, memoryObject)
+//     }
+//   ]
+// }
+
