@@ -1,0 +1,7 @@
+log = (...values<[Any]>)<null> => {
+  output = values.each(value => value.toString()).join(' ')
+  json = serializeJson(output)
+  await js`console.log({json})`
+}
+
+addToScope(log:)

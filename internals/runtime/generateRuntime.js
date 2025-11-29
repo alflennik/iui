@@ -14,23 +14,31 @@ const generateRuntime = async () => {
   await deleteAllGeneratedFiles()
 
   try {
-    await runCommand("npm init --yes")
+    // await runCommand("npm init --yes")
 
-    console.info("installing @hastom/fixed-point")
-    await runCommand("npm i @hastom/fixed-point")
-    console.info("installing crypto-random")
-    await runCommand("npm i crypto-random")
-    console.info("installing esbuild")
-    await runCommand("npm i esbuild")
+    // console.info("installing @hastom/fixed-point")
+    // await runCommand("npm i @hastom/fixed-point")
+    // console.info("installing crypto-random")
+    // await runCommand("npm i crypto-random")
+    // console.info("installing esbuild")
+    // await runCommand("npm i esbuild")
+    console.info("copying files")
+
+    const filePaths = await fs.readdir(path.join(runtimeFolderPath, "src"))
+
+    for (const filePath of filePaths) {
+      if (filePath === "node_modules") continue
+      await fs.copyFile(
+        path.join(runtimeFolderPath, "src", filePath),
+        path.join(tempFolderPath, filePath)
+      )
+    }
+    console.info("installing")
+    await runCommand("npm i") // check it works
+
     await runCommand("./node_modules/.bin/esbuild --version") // check it works
 
     console.info("bundling runtime environment")
-
-    await fs.copyFile(
-      path.join(runtimeFolderPath, "./src/index.js"),
-      path.join(tempFolderPath, "./index.js")
-    )
-
     await runCommand(
       "./node_modules/.bin/esbuild index.js --bundle --outfile=bundled.js --external:crypto"
     )

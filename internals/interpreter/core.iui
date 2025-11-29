@@ -1,12 +1,270 @@
-// scope = *{
-//   &scopeId<!>
-//   *return [
-//     enter: () => {
-//       &scopeId = "{getRandomNumberBetween(100_000_000, 999_999_999)}"
+// Not in use
+
+scope = {
+  blocks = [[id: try! bootstrap.getRandomNumber().toString()[2,]<!>, names: []]]
+
+  return [
+    enter: () => {
+      id = try! bootstrap.getRandomNumber().toString()[2,]<!>
+      blocks.add([id:, names: []])
+    }
+    add: (nameString, value) => {
+      currentBlock = blocks[-1]
+      currentBlock.names[nameString] = value
+    }
+    get: (nameString) => {
+      &depth = blocks.count() - 1
+      while &depth >= 0 {
+        result<!> = blocks[&depth]<!>[nameString]<!>
+        if result<!>, return result
+        &depth -= 1
+      }
+    }
+    exit: () => {
+      blocks.remove(-1)
+    }
+  ]
+}
+
+// baseFieldsByStorageType = [
+//   object: [
+//     each: (memoryObject, callback) => {
+//       results = []
+
+//       &i = 0
+//       while item<!> = memoryObject.access(&i)<!> {
+//         result = callback(item)
+//         results.add(result)
+//         &i += 1
+//       }
+
+//       return results
 //     }
-//     add: (nameString, memoryObject) => {
-//       bootstrap.reference(nameString, memoryObject)
+//     count: (memoryObject) => {
+//       i, &i = 0
+//       while item<!> = memoryObject.access(&i)<!> {
+//         &i += 1
+//       }
+//       return i
 //     }
 //   ]
-// }
+// ]
+
+core = [
+  name: nameString => {
+    return scope.get(nameString)
+  }
+  // myObject.field
+  read: (node1, node2) => {
+    memoryObject = execute(node1)
+    if node2[0] != "name", throw createError("Syntax error")
+    nameString = node2[1]
+
+    // baseFields = try! baseFieldsByStorageType[memoryObject.getStorageType()]<!>
+    // if baseFields[nameString]<!>, return baseFields[nameString]
+    
+    return memoryObject.read(nameString)
+  }
+  // myObject["field"]
+  access: (node1, node2, node3 = null) => {
+    memoryObject1 = execute(node1)
+    memoryObject2 = execute(node2)
+    
+    // baseFields = try! baseFieldsByStorageType[memoryObject1.getStorageType()]<!>
+    // if baseFields[nameString]<!>, return baseFields[nameString]
+
+    return memoryObject1.access(memoryObject2)
+  }
+  // myArray[0, -1]
+  accessRange: (node1, node2, node3 = null) => {
+    memoryObject1 = execute(node1)
+    memoryObject2 = execute(node2)
+    memoryObject3<!> = node3<!> ? execute(node3) : null
+    return memoryObject1.accessRange(memoryObject2, memoryObject3<!>)
+  }
+  add: (node1, node2) => {
+    result1 = execute(node1)
+    result2 = execute(node2)
+    memoryObject = createMemoryObject()
+    memoryObject.assignNumber(bootstrap.add(result1, result2))
+    return memoryObject
+  }
+  addAndAssign: (node1, node2) => {
+    result1 = execute(node1)
+    result2 = execute(node2)
+    result1.assignNumber(bootstrap.add(result1, result2))
+  }
+  subtract: (node1, node2) => {
+    result1 = execute(node1)
+    result2 = execute(node2)
+    memoryObject = createMemoryObject()
+    memoryObject.assignNumber(bootstrap.subtract(result1, result2))
+    return memoryObject
+  }
+  subtractAndAssign: (node1, node2) => {
+    numberObject1 = execute(node1)
+    numberObject2 = execute(node2)
+    numberObject1.assignNumber(bootstrap.subtract(numberObject1, numberObject2))
+  }
+  multiply: (node1, node2) => {
+    result1 = execute(node1)
+    result2 = execute(node2)
+    memoryObject = createMemoryObject()
+    memoryObject.assignNumber(bootstrap.multiply(result1, result2))
+    return memoryObject
+  }
+  number: numberValue => {
+    memoryObject = createMemoryObject()
+    memoryObject.assignNumber(bootstrap.number(numberValue))
+    return memoryObject
+  }
+  equals: (node1, node2) => {
+    result1 = execute(node1)
+    result2 = execute(node2)
+    if result1.getStorageType() == "string" || result1.getStorageType() == "string" {
+      return bootstrap.stringEquals(result1, result2)
+    } else if result1.getStorageType() === "number" || result2.getStorageType() === "number" {
+      return bootstrap.numberEquals(result1, result2)
+    }
+    throw createError('Equals not intelligent enough yet')
+  }
+  blockExpression: (...nodes) => {
+    scope.enter()
+
+    nodes.each(node => {
+      execute(node)
+    })
+
+    scope.exit()
+  }
+  function: (parametersNode, statementsNode) => {
+    return bootstrap.function(args => {
+      scope.enter()
+
+      if parametersNode[0] != "parameters", throw createError("Syntax error")
+
+      &index = 0
+      parametersNode[1,].each(node => {
+        if node[0] == "spread" {
+          if node[1][0] != "name", throw createError("Syntax error")
+          scope.add(node[1][0], args.positional[index,])
+          &index += 1
+        } else if node[0] == "name" {
+          scope.add(node[1], args.positional[index])
+          &index += 1
+        } else if node[0] == "named" {
+          nameString = node[1]
+          scope.add(nameString, args.named[nameString])
+        } else {
+          throw createError("Syntax error")
+        }
+      })
+
+      if statementsNode[0] != "statements", throw createError("Syntax error")
+      execute(statementsNode)
+      scope.exit()
+    })
+  }
+  parameters: () => {
+    throw createError("Syntax error") // Only meant to be executed in function node
+  }
+  statements: (...nodes) => {
+    nodes.each(node => {
+      execute(node)
+    })
+  }
+  call: (nameNode, argumentsNode) => {
+    args = execute(argumentsNode)
+    functionValue = execute(nameNode)
+    return bootstrap.call(functionValue, args)
+  }
+  arguments: (...nodes) => {
+    results = nodes.each(node => execute(node))
+    return results
+  }
+  // value = getValue()
+  // myObject.&value = getValue()
+  assign: (node1, node2) => {
+    initialNameString<!> = {
+      if node1[0] == "name", return node1[1]
+      if node1[0] == "blaze" {
+        if node1[1][0] == "name", return node1[1][1]
+      }
+    }
+    
+    if (initialNameString<!>) {
+      result = execute(node2)
+      scope.add(initialNameString, result)
+      return result
+    } else {
+      result1 = execute(node1)
+      result2 = execute(node2)
+      result1.reassign(result2)
+      return result1
+    }
+  }
+  // myField, &myField = getField()
+  multipleAssign: (node1, node2, node3) => {
+    if node1[0] != "name" || node2[0] != "name", throw createError("Syntax error")
+    nameString1 = node1[1]
+    nameString2 = node2[1]
+    result = execute(node3)
+    scope.add(nameString1, result)
+    scope.add(nameString2, result)
+  }
+  ternary: (conditionNode, thenNode, elseNode) => {
+    if (conditionNode[0] != "condition") throw createError("Syntax error")
+    condition = execute(conditionNode[1])
+    if (condition) {
+      return execute(thenNode[1])
+    } else {
+      return execute(elseNode[1])
+    }
+  }
+  ifStatement: (conditionNode, thenNode, ...elseIfNodes) => {
+    return bootstrap.if(conditionNode, thenNode, ...elseIfNodes)
+  }
+  // TODO:
+  // while: () => {}
+  parentheses: node1 => {
+    return execute(node1)
+  }
+  string: (...nodes) => {
+    output, &output = ""
+    nodes.each(node => {
+      if (node[0] === "stringContent") {
+        &output += node[1]
+      } else if (node[0] === "stringReplacement") {
+        &output += execute(node[1])
+      } else {
+        throw createError("Syntax error")
+      }
+    })
+    return output
+  }
+  object: (...nodes) => {
+    memoryObject = createMemoryObject()
+    index, &index = 0
+    nodes.each(node => {
+      if node[0] == "name" {
+        result = execute(node)
+        memoryObject.setIndex(index, result)
+        &index += 1
+      } else if node[0] == "named" {
+        nameString = node[1]
+        result = {
+          if node[2], return execute(node[2])
+          return execute(node[1])
+        }
+        memoryObject.setName(nameString, result)
+      } else {
+        throw createError("Syntax error")
+      }
+    })
+    // TODO: base fields
+    return memoryObject
+  }
+  tryThrow: (node) => execute(node) // noop for now
+  blaze: (node) => execute(node) // noop for now
+]
 

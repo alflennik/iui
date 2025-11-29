@@ -1,57 +1,149 @@
-import { fpFromDecimal } from "@hastom/fixed-point"
-import getRandomNumber from "crypto-random"
+import createMemoryObject from "./createMemoryObject.js"
+import bootstrap, { createExecute, setExecute } from "./bootstrap.js"
 
-// A BigInt can have up to 19 decimal digits fit into 64 bits of value storage
-const officialPrecision = 18 // largest possible number is 999 quadrillion
+const createScope = () => {
+  const blocks = [{ id: bootstrap.getRandomNumber().toString().slice(2), names: {} }]
 
-// Enables digits of rounding, so 1/3 + 1/3 + 1/3 = 1 instead of 0.9999999
-const extraDigitsOfHiddenPrecision = 1
-
-const internalPrecision = officialPrecision + extraDigitsOfHiddenPrecision
-
-const scopeVars = {
-  console,
-  log: console.log,
+  return {
+    enter: () => {
+      const id = bootstrap.getRandomNumber().toString().slice(2)
+      blocks.push({ id, names: {} })
+    },
+    add: (nameString, value) => {
+      const currentBlock = blocks.at(-1)
+      currentBlock.names[nameString] = value
+    },
+    get: nameString => {
+      let depth = blocks.length - 1
+      while (depth >= 0) {
+        const result = blocks[depth].names[nameString]
+        if (result) return result
+        depth -= 1
+      }
+    },
+    exit: () => {
+      delete blocks[blocks.length - 1]
+    },
+  }
 }
+const scope = createScope()
+
+scope.add(
+  "log",
+  (() => {
+    const memoryObject = createMemoryObject()
+    memoryObject.assignFunction(console.log)
+    return memoryObject
+  })()
+)
 
 const core = {
   name: nameString => {
-    return scopeVars[nameString]
+    return scope.get(nameString)
   },
+  // myObject.field
   read: (node1, node2) => {
-    const object = execute(node1)
+    const memoryObject = execute(node1)
     if (node2[0] !== "name") throw new Error("Syntax error")
-    const name = node2[1]
-    return object[name]
+    const nameString = node2[1]
+
+    return memoryObject.read(nameString)
+  },
+  // myObject["field"]
+  access: (node1, node2) => {
+    memoryObject1 = execute(node1)
+    memoryObject2 = execute(node2)
+    return memoryObject1.access(memoryObject2)
+  },
+  // myArray[0, -1]
+  accessRange: (node1, node2, node3) => {
+    memoryObject1 = execute(node1)
+    memoryObject2 = execute(node2)
+    memoryObject3 = node3 ? execute(node3) : null
+    return memoryObject1.accessRange(memoryObject2, memoryObject3)
   },
   add: (node1, node2) => {
     const result1 = execute(node1)
     const result2 = execute(node2)
-    return result1.add(result2)
+    return bootstrap.add(result1, result2)
+  },
+  addAndAssign: (node1, node2) => {
+    const result1 = execute(node1)
+    const result2 = execute(node2)
+    result1.reassign(bootstrap.add(result1, result2))
+  },
+  subtract: (node1, node2) => {
+    const result1 = execute(node1)
+    const result2 = execute(node2)
+    return bootstrap.subtract(result1, result2)
+  },
+  subtractAndAssign: (node1, node2) => {
+    const result1 = execute(node1)
+    const result2 = execute(node2)
+    result1.reassign(bootstrap.subtract(result1, result2))
   },
   multiply: (node1, node2) => {
     const result1 = execute(node1)
     const result2 = execute(node2)
-    return result1.mul(result2)
+    return bootstrap.multiply(result1, result2)
   },
   number: numberValue => {
-    return fpFromDecimal(numberValue, internalPrecision)
+    const memoryObject = createMemoryObject()
+    memoryObject.assignNumber(bootstrap.number(numberValue))
+    return memoryObject
   },
   equals: (node1, node2) => {
     const result1 = execute(node1)
     const result2 = execute(node2)
-    return result1.eq(result2) // only supports numbers right now
+    if (result1.getStorageType() === "string" || result1.getStorageType() === "string") {
+      return result1.getValue() === result2.getValue()
+    } else if (result1.getStorageType() === "number" || result2.getStorageType() === "number") {
+      return bootstrap.numberEquals(result1, result2)
+    }
+    throw new Error("Equals not intelligent enough yet")
+  },
+  blockExpression: (...nodes) => {
+    scope.enter()
+
+    nodes.forEach(node => {
+      execute(node)
+    })
+
+    scope.exit()
   },
   function: (parametersNode, statementsNode) => {
-    return args => {
-      execute(["parameters", args, ...parametersNode.slice(1)])
+    const functionValue = args => {
+      scope.enter()
+
+      if (parametersNode[0] !== "parameters") throw new Error("Syntax error")
+
+      let index = 0
+      parametersNode.slice(1).forEach(node => {
+        if (node[0] === "spread") {
+          if (node[1][0] !== "name") throw new Error("Syntax error")
+          scope.add(node[1][0], args.positional[index])
+          index += 1
+        } else if (node[0] === "name") {
+          scope.add(node[1], args.positional[index])
+          index += 1
+        } else if (node[0] === "named") {
+          nameString = node[1]
+          scope.add(nameString, args.named[nameString])
+        } else {
+          throw new Error("Syntax error")
+        }
+      })
+
+      if (statementsNode[0] !== "statements") throw new Error("Syntax error")
       execute(statementsNode)
+      scope.exit()
     }
+    const memoryObject = createMemoryObject()
+    memoryObject.assignFunction(functionValue)
+    return memoryObject
   },
-  parameters: (args, ...nodes) => {
-    nodes.forEach((node, index) => {
-      execute(["assign", node, ["rawValue", args[index]]])
-    })
+  parameters: () => {
+    throw new Error("Syntax error") // Only meant to be executed in function node
   },
   statements: (...nodes) => {
     nodes.forEach(node => {
@@ -61,33 +153,59 @@ const core = {
   call: (nameNode, argumentsNode) => {
     const args = execute(argumentsNode)
     const functionValue = execute(nameNode)
-    functionValue(args)
+    return bootstrap.call(functionValue, args)
   },
   arguments: (...nodes) => {
     const results = nodes.map(node => execute(node))
     return results
   },
+  // value = getValue()
+  // myObject.&value = getValue()
   assign: (node1, node2) => {
-    if (node1[0] !== "name") throw new Error("Syntax error")
-    const nameString = node1[1]
-    value = execute(node2)
+    const initialNameString = (() => {
+      if (node1[0] === "name") return node1[1]
+      if (node1[0] === "blaze") {
+        if (node1[1][0] === "name") return node1[1][1]
+      }
+      return null
+    })()
 
-    scopeVars[nameString] = value
-    return value
-  },
-  ternary: (node1, node2, node3) => {
-    const condition = execute(node1[1])
-    if (condition) {
-      return execute(node2[1])
+    if (initialNameString) {
+      const result = execute(node2)
+      scope.add(initialNameString, result)
+      return result
     } else {
-      return execute(node3[1])
+      const result1 = execute(node1)
+      const result2 = execute(node2)
+      result1.reassign(result2)
+      return result1
     }
   },
+  // myField, &myField = getField()
+  multipleAssign: (node1, node2, node3) => {
+    if (node1[0] !== "name" || node2[0] !== "name") throw new Error("Syntax error")
+    const nameString1 = node1[1]
+    const nameString2 = node2[1]
+    result = execute(node3)
+    scope.add(nameString1, result)
+    scope.add(nameString2, result)
+  },
+  ternary: (conditionNode, thenNode, elseNode) => {
+    if (conditionNode[0] !== "condition") throw new Error("Syntax error")
+    const condition = execute(conditionNode[1])
+    if (condition) {
+      return execute(thenNode[1])
+    } else {
+      return execute(elseNode[1])
+    }
+  },
+  ifStatement: (conditionNode, thenNode, ...elseIfNodes) => {
+    return bootstrap.if(conditionNode, thenNode, ...elseIfNodes)
+  },
+  // TODO:
+  // while: () => {}
   parentheses: node1 => {
     return execute(node1)
-  },
-  rawValue: arbitraryData => {
-    return arbitraryData
   },
   string: (...nodes) => {
     let output = ""
@@ -96,20 +214,42 @@ const core = {
         output += node[1]
       } else if (node[0] === "stringReplacement") {
         output += execute(node[1])
+      } else {
+        throw new Error("Syntax error")
       }
     })
     return output
   },
-  getRandomNumber: () => {
-    return fpFromDecimal(getRandomNumber())
+  object: (...nodes) => {
+    const memoryObject = createMemoryObject()
+    let index = 0
+    nodes.forEach(node => {
+      if (node[0] === "name") {
+        const result = execute(node)
+        memoryObject.setIndex(index, result)
+        index += 1
+      } else if (node[0] === "named") {
+        const nameString = node[1]
+        result = (() => {
+          // myObject = [myName: myNameValue]
+          if (node[2]) return execute(node[2])
+          // myObject = [myName:]
+          return execute(node[1])
+        })()
+        memoryObject.setName(nameString, result)
+      } else {
+        throw new Error("Syntax error")
+      }
+    })
+    // TODO: base fields
+    return memoryObject
   },
+  tryThrow: node => execute(node), // noop for now
+  blaze: node => execute(node), // noop for now
 }
 
-const execute = node => {
-  const coreFunction = core[node[0]]
-  if (!coreFunction) throw new Error(`Invalid Syntax at ${node[0]}`)
-  return coreFunction(...node.slice(1))
-}
+const execute = createExecute(core)
+setExecute(execute)
 
 // const startTime = performance.now()
 // const result = execute(compiled)
@@ -123,27 +263,27 @@ const runtime = {
   execute,
 }
 
-// const compiled = [
-//   "statements",
-//   [
-//     "assign",
-//     ["name", "result"],
-//     [
-//       "ternary",
-//       [
-//         "condition",
-//         [
-//           "equals",
-//           ["multiply", ["number", "3"], ["parentheses", ["add", ["number", "1"], ["number", "1"]]]],
-//           ["number", "6"],
-//         ],
-//       ],
-//       ["then", ["string", ["stringContent", '"fantastic"']]],
-//       ["else", ["string", ["stringContent", '"huh?"']]],
-//     ],
-//   ],
-//   ["call", ["name", "log"], ["arguments", ["name", "result"]]],
-// ]
+const compiled = [
+  "statements",
+  [
+    "assign",
+    ["name", "result"],
+    [
+      "ternary",
+      [
+        "condition",
+        [
+          "equals",
+          ["multiply", ["number", "3"], ["parentheses", ["add", ["number", "1"], ["number", "1"]]]],
+          ["number", "6"],
+        ],
+      ],
+      ["then", ["string", ["stringContent", '"fantastic"']]],
+      ["else", ["string", ["stringContent", '"huh?"']]],
+    ],
+  ],
+  ["call", ["name", "log"], ["arguments", ["name", "result"]]],
+]
 
 /* prettier-ignore */
 // const compiled = (
@@ -166,6 +306,6 @@ const runtime = {
 //   ]
 // )
 //
-// execute(compiled)
+execute(compiled)
 
 globalThis.runtime = runtime
