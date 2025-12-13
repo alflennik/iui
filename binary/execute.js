@@ -1,4 +1,4 @@
-const compile = require("./compiler/compiler")
+const compile = require("../compiler/compiler")
 const path = require("node:path")
 const fs = require("node:fs/promises")
 const { spawn } = require("node:child_process")
@@ -36,10 +36,11 @@ const processFile = async () => {
 
   const sourceTree = compile(sourceCode)
 
-  const runtime = await fs.readFile(path.resolve(__dirname, "./runtime/runtime.js"), {
+  const runtime = await fs.readFile(path.resolve(__dirname, "../runtime/runtime.js"), {
     encoding: "utf-8",
   })
 
+  // TODO: output should be source code, not source tree.
   const js = `
     const sourceTree = ${JSON.stringify(sourceTree, null, 2)};
 

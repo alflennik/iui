@@ -1,3 +1,3 @@
 #!/usr/bin/env node
 
-require("./internals/execute.js")
+require("./binary/execute.js")
