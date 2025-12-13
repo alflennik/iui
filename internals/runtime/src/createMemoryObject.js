@@ -15,7 +15,7 @@ const createMemoryObject = () => {
     error: null,
   }
 
-  const values = {
+  let values = {
     ...defaultValues,
   }
 
@@ -37,18 +37,10 @@ const createMemoryObject = () => {
         }
       })
     },
-    assignObject: ({ objectFields, objectIndexes }) => {
-      Object.keys(values).map(key => {
-        if (key === "storageType") {
-          values.storageType = "object"
-        } else if (key === "objectFields") {
-          values.objectFields = objectFields
-        } else if (key === "objectIndexes") {
-          values.objectIndexes = objectIndexes
-        } else {
-          values[key] = defaultValues[key]
-        }
-      })
+    assignObject: object => {
+      // Ensure this memory object shares the same memory as the assigned object so current and
+      // future values alike continue to be shared
+      values = object[valuesSymbol]
     },
     assignString: basicString => {
       Object.keys(values).map(key => {

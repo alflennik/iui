@@ -49,8 +49,7 @@ const processFile = async () => {
   `
 
   if (outputFilePath) {
-    throw new Error("Not implemented")
-    // await fs.writeFile(outputFilePath, js, { encoding: "utf-8" })
+    await fs.writeFile(outputFilePath, js, { encoding: "utf-8" })
   } else {
     await new Promise(resolve => {
       const child = spawn("node", ["-e", js], {

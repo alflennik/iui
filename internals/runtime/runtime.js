@@ -558,7 +558,7 @@
       boolean: null,
       error: null
     };
-    const values = {
+    let values = {
       ...defaultValues
     };
     const container = {
@@ -571,7 +571,7 @@
       assignNumber: (number) => {
         Object.keys(values).map((key) => {
           if (key === "storageType") {
-            storageType = "number";
+            values.storageType = "number";
           } else if (key === "number") {
             values.number = number;
           } else {
@@ -579,23 +579,13 @@
           }
         });
       },
-      assignObject: ({ objectFields: objectFields2, objectIndexes: objectIndexes2 }) => {
-        Object.keys(values).map((key) => {
-          if (key === "storageType") {
-            storageType = "object";
-          } else if (key === "objectFields") {
-            values.objectFields = objectFields2;
-          } else if (key === "objectIndexes") {
-            values.objectIndexes = objectIndexes2;
-          } else {
-            values[key] = defaultValues[key];
-          }
-        });
+      assignObject: (object) => {
+        values = object[valuesSymbol];
       },
       assignString: (basicString) => {
         Object.keys(values).map((key) => {
           if (key === "storageType") {
-            storageType = "string";
+            values.storageType = "string";
           } else if (key === "string") {
             values.string = basicString;
           } else {
@@ -606,7 +596,7 @@
       assignNull: () => {
         Object.keys(values).map((key) => {
           if (key === "storageType") {
-            storageType = "null";
+            values.storageType = "null";
           } else if (key === "null") {
             values.null = true;
           } else {
@@ -617,9 +607,20 @@
       assignBoolean: (booleanValue) => {
         Object.keys(values).map((key) => {
           if (key === "storageType") {
-            storageType = "boolean";
+            values.storageType = "boolean";
           } else if (key === "boolean") {
             values.boolean = booleanValue;
+          } else {
+            values[key] = defaultValues[key];
+          }
+        });
+      },
+      assignFunction: (functionValue) => {
+        Object.keys(values).map((key) => {
+          if (key === "storageType") {
+            values.storageType = "function";
+          } else if (key === "function") {
+            values.function = functionValue;
           } else {
             values[key] = defaultValues[key];
           }
@@ -684,8 +685,9 @@
   var createMemoryObject_default = createMemoryObject;
 
   // bootstrap.js
-  var import_fixed_point = __toESM(require_dist());
-  var import_crypto_random = __toESM(require_random());
+  var import_fixed_point = __toESM(require_dist(), 1);
+  var import_crypto_random = __toESM(require_random(), 1);
+  var getRandomNumber = () => import_crypto_random.default.value();
   var officialPrecision = 18;
   var extraDigitsOfHiddenPrecision = 1;
   var internalPrecision = officialPrecision + extraDigitsOfHiddenPrecision;
@@ -702,7 +704,7 @@
   };
   var bootstrap = {
     getRandomNumber: () => {
-      return (0, import_fixed_point.fpFromDecimal)((0, import_crypto_random.default)());
+      return (0, import_fixed_point.fpFromDecimal)(getRandomNumber(), internalPrecision);
     },
     add: (memoryObject12, memoryObject22) => {
       const number1 = memoryObject12.getValue();
@@ -725,11 +727,17 @@
       memoryObject.assignNumber(number1.mul(number2));
       return memoryObject;
     },
+    numberEquals: (memoryObject12, memoryObject22) => {
+      const number1 = memoryObject12.getValue();
+      const number2 = memoryObject22.getValue();
+      return number1.eq(number2);
+    },
     number: (numberValue) => {
       return (0, import_fixed_point.fpFromDecimal)(numberValue, internalPrecision);
     },
-    call: (functionValue, args) => {
-      functionValue(args);
+    call: (memoryObject12, args) => {
+      const functionValue = memoryObject12.getValue();
+      return functionValue(args);
     },
     if: (conditionNode, thenNode, ...elseIfNodes) => {
       const condition = execute(conditionNode);
@@ -754,20 +762,20 @@
 
   // index.js
   var createScope = () => {
-    const blocks = [];
+    const blocks = [{ id: bootstrap_default.getRandomNumber().toString().slice(2), names: {} }];
     return {
       enter: () => {
         const id = bootstrap_default.getRandomNumber().toString().slice(2);
-        blocks.push({ id, names: [] });
+        blocks.push({ id, names: {} });
       },
       add: (nameString2, value) => {
-        currentBlock = blocks.at(-1);
+        const currentBlock = blocks.at(-1);
         currentBlock.names[nameString2] = value;
       },
       get: (nameString2) => {
         let depth = blocks.length - 1;
         while (depth >= 0) {
-          const result2 = blocks[depth][nameString2];
+          const result2 = blocks[depth].names[nameString2];
           if (result2) return result2;
           depth -= 1;
         }
@@ -778,6 +786,14 @@
     };
   };
   var scope = createScope();
+  scope.add(
+    "log",
+    (() => {
+      const memoryObject = createMemoryObject_default();
+      memoryObject.assignFunction(console.log);
+      return memoryObject;
+    })()
+  );
   var core = {
     name: (nameString2) => {
       return scope.get(nameString2);
@@ -805,36 +821,32 @@
     add: (node1, node2) => {
       const result1 = execute2(node1);
       const result2 = execute2(node2);
-      const memoryObject = createMemoryObject_default();
-      memoryObject.assignNumber(bootstrap_default.add(result1, result2));
-      return memoryObject;
+      return bootstrap_default.add(result1, result2);
     },
     addAndAssign: (node1, node2) => {
       const result1 = execute2(node1);
       const result2 = execute2(node2);
-      result1.assignNumber(bootstrap_default.add(result1, result2));
+      result1.reassign(bootstrap_default.add(result1, result2));
     },
     subtract: (node1, node2) => {
       const result1 = execute2(node1);
       const result2 = execute2(node2);
-      const memoryObject = createMemoryObject_default();
-      memoryObject.assignNumber(bootstrap_default.subtract(result1, result2));
-      return memoryObject;
+      return bootstrap_default.subtract(result1, result2);
     },
     subtractAndAssign: (node1, node2) => {
       const result1 = execute2(node1);
       const result2 = execute2(node2);
-      result1.assignNumber(bootstrap_default.subtract(result1, result2));
+      result1.reassign(bootstrap_default.subtract(result1, result2));
     },
     multiply: (node1, node2) => {
       const result1 = execute2(node1);
       const result2 = execute2(node2);
-      const memoryObject = createMemoryObject_default();
-      memoryObject.assignNumber(bootstrap_default.multiply(result1, result2));
-      return memoryObject;
+      return bootstrap_default.multiply(result1, result2);
     },
     number: (numberValue) => {
-      return bootstrap_default.number(numberValue);
+      const memoryObject = createMemoryObject_default();
+      memoryObject.assignNumber(bootstrap_default.number(numberValue));
+      return memoryObject;
     },
     equals: (node1, node2) => {
       const result1 = execute2(node1);
@@ -842,7 +854,7 @@
       if (result1.getStorageType() === "string" || result1.getStorageType() === "string") {
         return result1.getValue() === result2.getValue();
       } else if (result1.getStorageType() === "number" || result2.getStorageType() === "number") {
-        return result1.eq(result2);
+        return bootstrap_default.numberEquals(result1, result2);
       }
       throw new Error("Equals not intelligent enough yet");
     },
@@ -854,7 +866,7 @@
       scope.exit();
     },
     function: (parametersNode, statementsNode) => {
-      return (args) => {
+      const functionValue = (args) => {
         scope.enter();
         if (parametersNode[0] !== "parameters") throw new Error("Syntax error");
         let index = 0;
@@ -877,6 +889,9 @@
         execute2(statementsNode);
         scope.exit();
       };
+      const memoryObject = createMemoryObject_default();
+      memoryObject.assignFunction(functionValue);
+      return memoryObject;
     },
     parameters: () => {
       throw new Error("Syntax error");
@@ -906,9 +921,9 @@
         return null;
       })();
       if (initialNameString) {
-        result = execute2(node2);
-        scope.add(initialNameString, result);
-        return result;
+        const result2 = execute2(node2);
+        scope.add(initialNameString, result2);
+        return result2;
       } else {
         const result1 = execute2(node1);
         const result2 = execute2(node2);
@@ -988,5 +1003,27 @@
     // fpFromDecimal,
     execute: execute2
   };
+  var compiled = [
+    "statements",
+    [
+      "assign",
+      ["name", "result"],
+      [
+        "ternary",
+        [
+          "condition",
+          [
+            "equals",
+            ["multiply", ["number", "3"], ["parentheses", ["add", ["number", "1"], ["number", "1"]]]],
+            ["number", "6"]
+          ]
+        ],
+        ["then", ["string", ["stringContent", '"fantastic"']]],
+        ["else", ["string", ["stringContent", '"huh?"']]]
+      ]
+    ],
+    ["call", ["name", "log"], ["arguments", ["name", "result"]]]
+  ];
+  execute2(compiled);
   globalThis.runtime = runtime;
 })();

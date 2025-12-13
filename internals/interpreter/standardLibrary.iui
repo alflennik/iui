@@ -1,7 +1,73 @@
 log = (...values<[Any]>)<null> => {
-  output = values.each(value => value.toString()).join(' ')
-  json = serializeJson(output)
-  await js`console.log({json})`
+  recurse = (any, indentLevel: <Number> = 0) => {
+    indent = {
+      &indent = ''
+      for &i = 0; i < indentLevel; i += 1 {
+        &indent += '  '
+      }
+      return &indent
+    }
+
+    switch(any.Type,
+      [Object]: () => *{
+        if any.properties.count == 0 {
+          return "[]"
+        }
+        output, &output = "[\n"
+        any.properties.each((.indexed(item<!>), .named(key<!>, value<!>)) => {
+          if item<!> {
+            &output += intent + recurse(item, indentLevel: indentLevel + 1) + ',\n'
+          }
+          if key<!> && value<!> {
+            &output += `{indent}{key}:` + recurse(item, indentLevel: indentLevel + 1) + ',\n'
+          }
+        })
+        &output += `{indent}]`
+        return output
+      }
+      [Enumeration]: () => *{
+        enum = any
+        if enum.associatedValues<!> {
+          if enum.associatedValues.count == 0 {
+            return ".{enum.name}()"
+          }
+          output, &output = ".{enum.name}(\n"
+          enum.associatedValues.each((.indexed(item<!>), .named(key<!>, value<!>)) => {
+            if item<!> {
+              &output += intent + recurse(item, indentLevel: indentLevel + 1) + ',\n'
+            }
+            if key<!> && value<!> {
+              &output += `{indent}{key}:` + recurse(item, indentLevel: indentLevel + 1) + ',\n'
+            }
+          })
+          &output += `{indent})`
+          return output
+        }
+        return `.{enum.name}`
+      }
+      [String]: () => *{
+        return `"{any}"`
+      }
+      [Number]: () => *{
+        // Remove extra zeros here
+        return number.toString()
+      }
+      [<|Boolean, null|>]: *{
+        return any.toString()
+      }
+    )
+  }
+
+  finalString = {
+    strings = values.each(value => recurse(value))
+    if strings.find(string => string.contains('\n')) {
+      return strings.join('\n')
+    } else {
+      return strings.join(' ')
+    }
+  }
+  
+  await js`console.log("{finalString}")`
 }
 
 addToScope(log:)
