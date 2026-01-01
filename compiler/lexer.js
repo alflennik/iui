@@ -6,7 +6,7 @@ const lex = tokens => {
   const blockIds = {}
 
   const startId = getId()
-  lexemes.push({ id: startId, content: "statementsStart" })
+  lexemes.push({ id: startId, content: "fileStart" })
 
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i]
@@ -16,7 +16,7 @@ const lex = tokens => {
 
     if (token.content.match(/^\s/)) continue // ignore whitespace now
 
-    if (previousToken?.content != "." && token.content.match(/(await)/)) {
+    if (previousToken?.content != "." && token.content.match(/(await|return|if|else)/)) {
       lexemes.push({ id: getId(), content: token.content })
       continue
     }
@@ -28,11 +28,50 @@ const lex = tokens => {
     }
 
     if (token.content.match(/^&?[a-zA-Z0-9]+/)) {
+      let isArrowFunction = false
+      if (nextToken.content === "=>") {
+        isArrowFunction = true
+        i += 1
+      } else if (nextToken.content.match(/^\s+$/) && tokens[i + 2].content === "=>") {
+        isArrowFunction = true
+        i += 2
+      }
+
+      if (isArrowFunction) {
+        const blockStartId = getId()
+        const blockEndId = getId()
+        blockIds[blockStartId] = blockEndId
+        lexemes.push(
+          { id: blockStartId, content: "parametersStart" },
+          { id: token.id, content: ["name", token.content] },
+          { id: blockEndId, content: "parametersEnd" },
+          { id: getId(), content: "function" }
+        )
+        continue
+      }
       lexemes.push({ id: getId(), content: ["name", token.content] })
       continue
     }
 
-    if (token.content.startsWith('"')) {
+    if (token.content === "{") {
+      const id = getId()
+      openBlocks.push([id, "statementsStart"])
+      lexemes.push({ id, content: "statementsStart" })
+      continue
+    }
+
+    if (token.content === "}") {
+      const [blockStartId, blockOpenedAs] = openBlocks.pop()
+      const id = getId()
+      if (!blockStartId || blockOpenedAs !== "statementsStart") throw new Error("Mismatched braces")
+
+      blockIds[blockStartId] = id
+
+      lexemes.push({ id, content: "statementsEnd" })
+      continue
+    }
+
+    if (token.content.startsWith('"') || token.content.startsWith("'")) {
       const blockStartId = getId()
       const blockEndId = getId()
       blockIds[blockStartId] = blockEndId
@@ -55,16 +94,21 @@ const lex = tokens => {
     }
 
     if (token.content === "?") {
-      lexemes.push({ id: getId(), content: "ternaryCondition" })
+      lexemes.push({ id: getId(), content: "ternary" })
       continue
     }
     if (token.content === ":" && previousToken.content?.match(/^\s/)) {
-      lexemes.push({ id: getId(), content: "ternaryThen" })
+      lexemes.push({ id: getId(), content: "ternaryElse" })
       continue
     }
 
     if (token.content === "+") {
       lexemes.push({ id: getId(), content: "add" })
+      continue
+    }
+
+    if (token.content === ".") {
+      lexemes.push({ id: getId(), content: "read" })
       continue
     }
 
@@ -112,12 +156,35 @@ const lex = tokens => {
       }
     }
 
+    if (token.content === "[") {
+      const id = getId()
+      openBlocks.push([id, "objectStart"])
+      lexemes.push({ id, content: "objectStart" })
+      continue
+    }
+
+    if (token.content === "]") {
+      const [blockStartId, blockOpenedAs] = openBlocks.pop()
+      const id = getId()
+      if (!blockStartId || blockOpenedAs !== "objectStart") throw new Error("Mismatched brackets")
+
+      blockIds[blockStartId] = id
+
+      lexemes.push({ id, content: "objectEnd" })
+      continue
+    }
+
+    if (token.content === ":" && openBlocks.at(-1)?.[1] === "objectStart") {
+      lexemes.push({ id: token.id, content: "named" })
+      continue
+    }
+
     throw new Error("Failed to process syntax")
   }
 
   const endId = getId()
   blockIds[startId] = endId
-  lexemes.push({ id: endId, content: "statementsEnd" })
+  lexemes.push({ id: endId, content: "fileEnd" })
 
   return { lexemes, blockIds }
 }

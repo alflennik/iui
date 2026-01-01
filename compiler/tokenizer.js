@@ -4,6 +4,7 @@ const tokenize = sourceCode => {
   const matchers = [
     // strings
     { match: /^"[^"]*"/ },
+    { match: /^'[^']*'/ },
     // any names, type name or keywords
     { match: /^&?[a-zA-Z][a-zA-Z0-9]*/ },
     // numbers which can include underscores (not at the beginning or end) and one dot (not at end)
@@ -14,11 +15,13 @@ const tokenize = sourceCode => {
     { match: /^\d*\.\d+/ }, // dot at beginning or middle
     { match: /^\d+/ },
     // symbols that aren't whitespace sensitive
-    { match: /^[\[\]\(\):]/ },
+    { match: /^[\[\]\(\):{}\.]/ },
+    { match: /^=>/ },
     // symbols that are whitespace sensitive
     { match: /^[=*+\-?|]+/ },
     // whitespace
-    { match: /^\s/ },
+    { match: /^[ \t]+/ }, // spaces and tabs
+    { match: /^\n/ }, // handle newlines separately since they have parsing implications
   ]
 
   let tokens = []

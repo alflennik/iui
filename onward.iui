@@ -1,4 +1,4 @@
-expect = (value1) => {
+expect = value1 => {
   return [
     toEqual: value2 => {
       if value1 == value2 {

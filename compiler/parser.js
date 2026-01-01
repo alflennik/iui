@@ -4,14 +4,20 @@ const parse = ({ lexemes, blockIds }) => {
   const recurse = ({ lexemes, blockIds }) => {
     const matchersInOrderOfPrecedence = [
       { match: /Start$/, isBlock: true },
-      { match: /^(name|number)/, ignoreForPrecedence: true },
+      { match: /^(name|number)$/, ignoreForPrecedence: true },
       { match: /^stringContent/, ignoreForPrecedence: true },
+      { match: /^return$/ },
       { match: /^assign$/ },
-      { match: /^ternaryCondition$/ },
-      { match: /^ternaryThen$/ },
+      { match: /^if$/ },
+      { match: /^else$/ },
+      { match: /^ternary$/ },
+      { match: /^ternaryElse$/ },
+      { match: /^function$/ },
+      { match: /^named$/ },
       { match: /^equals$/ },
       { match: /^add$/ },
       { match: /^multiply$/ },
+      { match: /^read$/ },
       { match: /^call$/ },
     ]
 
@@ -51,7 +57,7 @@ const parse = ({ lexemes, blockIds }) => {
         }
       }
 
-      throw new Error("Unrecognized lexeme")
+      throw new Error(`Unrecognized lexeme "${lexeme.content}"`)
     }
 
     let sourceTreeInProgress = deepClone(lexemes)
@@ -78,18 +84,28 @@ const parse = ({ lexemes, blockIds }) => {
     const lexemesIdsInProcessOrder = Object.values(lexemeIdsByPrecedence).reverse()
 
     const operatorTypes = {
-      assign: "midfixBinary",
-      ternaryCondition: "ternaryCondition",
-      ternaryThen: "ternaryThen",
-      multiply: "midfixBinary",
+      // Order doesn't matter
       add: "midfixBinary",
-      equals: "midfixBinary",
+      assign: "midfixBinary",
       call: "midfixBinary",
+      else: "prefixUrnary",
+      equals: "midfixBinary",
+      function: "midfixBinary",
+      if: "specialOperatorIf",
+      multiply: "midfixBinary",
+      named: "midfixBinary",
+      read: "midfixBinary",
+      return: "prefixUrnary",
+      ternary: "midfixTernary1",
+      ternaryElse: "prefixUrnary",
     }
 
     lexemesIdsInProcessOrder.forEach(id => {
       const index = nodeIndexesById[id]
       const lexeme = sourceTreeInProgress[index]
+      if (lexeme.content === "call") {
+        console.log(lexeme.content)
+      }
       let sourceTreeNode
       if (operatorTypes[lexeme.content] === "midfixBinary") {
         sourceTreeNode = {
@@ -101,37 +117,54 @@ const parse = ({ lexemes, blockIds }) => {
           ],
         }
         sourceTreeInProgress.splice(index - 1, 3, sourceTreeNode)
-      } else if (operatorTypes[lexeme.content] === "ternaryThen") {
-        // ternaryThen parses before ternaryCondition
-        sourceTreeNodes = [
-          {
-            id,
-            content: ["then", sourceTreeInProgress[index - 1]],
-          },
-          {
-            id: getId(),
-            content: ["else", sourceTreeInProgress[index + 1]],
-          },
-        ]
-        sourceTreeInProgress.splice(index - 1, 3, ...sourceTreeNodes)
-      } else if (operatorTypes[lexeme.content] === "ternaryCondition") {
-        // Note: ternaryThen has already parsed
+      } else if (operatorTypes[lexeme.content] === "prefixUrnary") {
         sourceTreeNode = {
           id,
+          content: [lexeme.content, sourceTreeInProgress[index + 1]],
+        }
+        sourceTreeInProgress.splice(index, 2, sourceTreeNode)
+      } else if (operatorTypes[lexeme.content] === "midfixTernary1") {
+        sourceTreeNode = {
+          id: id,
           content: [
-            "ternary",
+            lexeme.content,
             {
               id: getId(),
-              content: ["condition", sourceTreeInProgress[index - 1]],
+              content: sourceTreeInProgress[index - 1],
             },
-            sourceTreeInProgress[index + 1],
-            sourceTreeInProgress[index + 2],
+            {
+              id: getId(),
+              content: sourceTreeInProgress[index + 1],
+            },
+            {
+              id: getId(),
+              content: sourceTreeInProgress[index + 2],
+            },
           ],
         }
+        sourceTreeInProgress.splice(index - 1, 3, ...sourceTreeNodes)
+      } else if (operatorTypes[lexeme.content] === "specialOperatorIf") {
+        let condition = sourceTreeInProgress[index + 1]
+        let then = sourceTreeInProgress[index + 2]
+        let elseNode
+        let elseNodeIndex = 3
+        while (true) {
+          if (sourceTreeInProgress[elseNodeIndex]?.content[0] === "else") {
+            elseNode = sourceTreeInProgress[index + elseNodeIndex]
+            elseNodeIndex += 1
+            break
+          }
 
-        sourceTreeInProgress.splice(index - 1, 4, sourceTreeNode)
+          break
+        }
+        let content = ["if", condition, then]
+        if (elseNode) {
+          content.push(elseNode)
+        }
+        sourceTreeNode = { id, content }
+        sourceTreeInProgress.splice(index, elseNodeIndex, sourceTreeNode)
       } else {
-        throw new Error("Failed to process operator")
+        throw new Error(`Failed to process operator "${lexeme.content}"`)
       }
       refreshNodeIndexesById()
     })
@@ -141,12 +174,18 @@ const parse = ({ lexemes, blockIds }) => {
 
   const sourceTreeInProgress = recurse({ lexemes, blockIds })
 
-  if (sourceTreeInProgress.length > 1) throw new Error("Failed to process operator")
+  if (sourceTreeInProgress.length > 1) {
+    throw new Error(`Failed to process operator`)
+  }
 
   const sourceTreeRaw = sourceTreeInProgress[0]
 
   const stripIds = sourceTreeNode => {
     if (sourceTreeNode.content) {
+      const lexemeDetected = !Array.isArray(sourceTreeNode.content)
+      if (lexemeDetected) {
+        throw new Error(`Failed to process operator "${sourceTreeNode.content}"`)
+      }
       return [
         sourceTreeNode.content[0],
         ...sourceTreeNode.content.slice(1).map(sourceTreeNode => stripIds(sourceTreeNode)),
