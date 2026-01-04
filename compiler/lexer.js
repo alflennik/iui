@@ -3,7 +3,7 @@ const getId = require("../utilities/getId")
 const lex = tokens => {
   const lexemes = []
   const openBlocks = []
-  const blockIds = {}
+  const blockIds = []
 
   const startId = getId()
   lexemes.push({ id: startId, content: "fileStart" })
@@ -40,7 +40,7 @@ const lex = tokens => {
       if (isArrowFunction) {
         const blockStartId = getId()
         const blockEndId = getId()
-        blockIds[blockStartId] = blockEndId
+        blockIds.push([blockStartId, blockEndId])
         lexemes.push(
           { id: blockStartId, content: "parametersStart" },
           { id: token.id, content: ["name", token.content] },
@@ -65,7 +65,7 @@ const lex = tokens => {
       const id = getId()
       if (!blockStartId || blockOpenedAs !== "statementsStart") throw new Error("Mismatched braces")
 
-      blockIds[blockStartId] = id
+      blockIds.push([blockStartId, id])
 
       lexemes.push({ id, content: "statementsEnd" })
       continue
@@ -74,7 +74,7 @@ const lex = tokens => {
     if (token.content.startsWith('"') || token.content.startsWith("'")) {
       const blockStartId = getId()
       const blockEndId = getId()
-      blockIds[blockStartId] = blockEndId
+      blockIds.push([blockStartId, blockEndId])
       lexemes.push(
         { id: blockStartId, content: "stringStart" },
         { id: getId(), content: ["stringContent", token.content] },
@@ -145,7 +145,7 @@ const lex = tokens => {
       const id = getId()
       if (!blockStartId) throw new Error("Mismatched parentheses")
 
-      blockIds[blockStartId] = id
+      blockIds.push([blockStartId, id])
 
       if (blockOpenedAs === "parenthesesStart") {
         lexemes.push({ id, content: "parenthesesEnd" })
@@ -168,7 +168,7 @@ const lex = tokens => {
       const id = getId()
       if (!blockStartId || blockOpenedAs !== "objectStart") throw new Error("Mismatched brackets")
 
-      blockIds[blockStartId] = id
+      blockIds.push([blockStartId, id])
 
       lexemes.push({ id, content: "objectEnd" })
       continue
@@ -183,7 +183,7 @@ const lex = tokens => {
   }
 
   const endId = getId()
-  blockIds[startId] = endId
+  blockIds.push([startId, endId])
   lexemes.push({ id: endId, content: "fileEnd" })
 
   return { lexemes, blockIds }

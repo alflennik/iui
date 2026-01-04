@@ -1,87 +1,215 @@
-const getId = require("../utilities/getId")
-
 const parse = ({ lexemes, blockIds }) => {
-  const recurse = ({ lexemes, blockIds }) => {
+  createSourceTreeInProgress = ({ lexemes }) => {
+    const sourceTreeInProgress = { content: [] }
+
+    const idToNodeMap = new Map()
+
+    let previousSibling
+    lexemes.forEach((lexeme, index) => {
+      const alreadyReadyToBeNode =
+        Array.isArray(lexeme.content) &&
+        ["name", "number", "stringContent"].includes(lexeme.content[0])
+
+      const node = {
+        type: alreadyReadyToBeNode ? "node" : "lexeme",
+        id: lexeme.id,
+        index,
+        name: Array.isArray(lexeme.content) ? lexeme.content[0] : lexeme.content,
+        content: Array.isArray(lexeme.content) ? lexeme.content.slice(1) : null,
+        parent: sourceTreeInProgress,
+        previousSibling,
+        nextSibling: undefined,
+      }
+      idToNodeMap.set(lexeme.id, node)
+      if (previousSibling) previousSibling.nextSibling = node
+      sourceTreeInProgress.content.push(node)
+      previousSibling = node
+    })
+
+    const getById = id => {
+      return idToNodeMap.get(id)
+    }
+
+    const createBlockNode = ({ startNode, endNode }) => {
+      const blockName = startNode.name.match(/^(.+)Start$/)[1]
+      if (blockName === "parameters" && endNode.index - startNode.index > 3) {
+        console.log()
+      }
+
+      const firstNode = startNode.nextSibling
+      const lastNode = endNode.previousSibling
+
+      const count = lastNode.index - firstNode.index + 1
+      const parent = startNode.parent
+
+      const children = parent.content.splice(firstNode.index, count)
+
+      parent.content.splice(startNode.index, 2) // remove start and end nodes
+      idToNodeMap.delete(startNode.id)
+      idToNodeMap.delete(endNode.id)
+
+      const newNode = {
+        type: "block",
+        id: startNode.id,
+        index: startNode.index,
+        name: blockName,
+        content: children,
+        parent,
+        previousSibling: startNode.previousSibling,
+        nextSibling: endNode.nextSibling,
+      }
+
+      idToNodeMap.set(startNode.id, newNode)
+
+      let previousSibling
+      children.forEach((child, index) => {
+        child.parent = newNode
+        child.index = index
+        child.previousSibling = previousSibling
+        if (previousSibling) previousSibling.nextSibling = child
+
+        previousSibling = child
+      })
+      if (previousSibling) previousSibling.nextSibling = undefined
+
+      previousSibling = startNode.previousSibling
+      if (previousSibling) previousSibling.nextSibling = newNode
+
+      const nextSibling = endNode.nextSibling
+      if (nextSibling) nextSibling.previousSibling = newNode
+
+      parent.content.splice(startNode.index, 0, newNode)
+
+      for (let i = newNode.index; i < parent.content.length; i += 1) {
+        parent.content[i].index = i
+      }
+    }
+
+    const createOperatorNode = ({ operatorNode, nodesBefore = [], nodesAfter = [] }) => {
+      const parent = operatorNode.parent
+
+      const firstNode =
+        nodesBefore.length && operatorNode.index > nodesBefore[0].index
+          ? nodesBefore[0]
+          : operatorNode
+
+      const lastNode =
+        nodesAfter.length && operatorNode.index < nodesAfter.at(-1).index
+          ? nodesAfter.at(-1)
+          : operatorNode
+
+      const newNode = {
+        type: "node",
+        id: operatorNode.id,
+        index: firstNode.index,
+        name: operatorNode.name,
+        content: [...nodesBefore, ...nodesAfter],
+        parent: operatorNode.parent,
+        previousSibling: firstNode.previousSibling,
+        nextSibling: lastNode.nextSibling,
+      }
+
+      const count = lastNode.index - firstNode.index + 1
+
+      parent.content.splice(firstNode.index, count, newNode)
+
+      idToNodeMap.set(operatorNode.id, newNode)
+
+      let previousSibling
+      newNode.content.forEach((node, index) => {
+        node.parent = newNode
+        node.index = index
+        node.previousSibling = previousSibling
+        if (previousSibling) previousSibling.nextSibling = node
+
+        previousSibling = node
+      })
+      if (previousSibling) previousSibling.nextSibling = undefined
+
+      previousSibling = newNode.previousSibling
+      if (previousSibling) previousSibling.nextSibling = newNode
+
+      const nextSibling = newNode.nextSibling
+      if (nextSibling) nextSibling.previousSibling = newNode
+
+      for (let i = newNode.index; i < parent.content.length; i += 1) {
+        parent.content[i].index = i
+      }
+    }
+
+    return {
+      sourceTreeInProgress,
+      getById,
+      createOperatorNode,
+      createBlockNode,
+    }
+  }
+
+  const { sourceTreeInProgress, getById, createOperatorNode, createBlockNode } =
+    createSourceTreeInProgress({ lexemes: deepClone(lexemes) })
+
+  const blocksToParse = []
+
+  blockIds.forEach(([startId, endId]) => {
+    const startNode = getById(startId)
+    const endNode = getById(endId)
+    createBlockNode({ startNode, endNode })
+    blocksToParse.push(getById(startId))
+  })
+
+  blocksToParse.forEach(block => {
     const matchersInOrderOfPrecedence = [
-      { match: /Start$/, isBlock: true },
-      { match: /^(name|number)$/, ignoreForPrecedence: true },
       { match: /^stringContent/, ignoreForPrecedence: true },
-      { match: /^return$/ },
-      { match: /^assign$/ },
-      { match: /^if$/ },
-      { match: /^else$/ },
-      { match: /^ternary$/ },
-      { match: /^ternaryElse$/ },
-      { match: /^function$/ },
-      { match: /^named$/ },
-      { match: /^equals$/ },
-      { match: /^add$/ },
-      { match: /^multiply$/ },
-      { match: /^read$/ },
+      { match: /^(name|number)$/, ignoreForPrecedence: true },
       { match: /^call$/ },
+      { match: /^read$/ },
+      { match: /^multiply$/ },
+      { match: /^add$/ },
+      { match: /^equals$/ },
+      { match: /^function$/ },
+      { match: /^ternaryElse$/ },
+      { match: /^ternary$/ },
+      { match: /^named$/ },
+      { match: /^else$/ },
+      { match: /^if$/ },
+      { match: /^assign$/ },
+      { match: /^return$/ },
     ]
 
-    const lexemeIdsByPrecedence = {}
-    const nestedBlocks = [] // will parse separately
+    const nodesByPrecedence = {}
 
-    lexemeIndexesById = Object.fromEntries(lexemes.map(({ id }, index) => [id, index]))
+    nodeLoop: for (let i = 0; i < block.content.length; i += 1) {
+      const node = block.content[i]
 
-    lexemeLoop: for (let i = 0; i < lexemes.length; i += 1) {
-      const lexeme = lexemes[i]
+      if (node.type === "block") continue nodeLoop
 
       for (let j = 0; j < matchersInOrderOfPrecedence.length; j += 1) {
         const matcher = matchersInOrderOfPrecedence[j]
         const precedenceIndex = j
 
-        const lexemeContent =
-          typeof lexeme.content === "string" ? lexeme.content : lexeme.content[0]
-
-        const match = lexemeContent.match(matcher.match)
+        const match = node.name.match(matcher.match)
         if (match) {
           if (matcher.ignoreForPrecedence === true) {
-            continue lexemeLoop
-          }
-          if (matcher.isBlock) {
-            const startId = lexeme.id
-            const endId = blockIds[startId]
-            const startIndex = lexemeIndexesById[startId]
-            const endIndex = lexemeIndexesById[endId]
-            const blockContents = lexemes.slice(startIndex, endIndex + 1)
-            nestedBlocks.push({ startId, endId, blockContents })
-            i += blockContents.length - 1
-            continue lexemeLoop
+            continue nodeLoop
           }
 
-          lexemeIdsByPrecedence[precedenceIndex] = lexeme.id
-          continue lexemeLoop
+          if (!nodesByPrecedence[precedenceIndex]) {
+            nodesByPrecedence[precedenceIndex] = []
+          }
+          nodesByPrecedence[precedenceIndex].push(node)
+
+          continue nodeLoop
         }
       }
 
-      throw new Error(`Unrecognized lexeme "${lexeme.content}"`)
+      throw new Error(`Unrecognized lexeme "${node.name}"`)
     }
 
-    let sourceTreeInProgress = deepClone(lexemes)
+    const nodesInProcessOrder = Object.values(nodesByPrecedence).flat()
 
-    let nodeIndexesById
-    const refreshNodeIndexesById = () => {
-      nodeIndexesById = Object.fromEntries(sourceTreeInProgress.map(({ id }, index) => [id, index]))
+    if (nodesInProcessOrder?.length > 2) {
+      console.log()
     }
-    refreshNodeIndexesById()
-
-    nestedBlocks.forEach(nestedBlock => {
-      const { startId, blockContents } = nestedBlock
-      const startIndex = nodeIndexesById[startId]
-      const blockName = sourceTreeInProgress[startIndex].content.match(/^(.+)Start$/)[1]
-
-      const blockSourceTreeNodes = recurse({ lexemes: blockContents.slice(1, -1), blockIds })
-
-      const sourceTreeNode = { id: startId, content: [blockName, ...blockSourceTreeNodes] }
-
-      sourceTreeInProgress.splice(startIndex, blockContents.length, sourceTreeNode)
-      refreshNodeIndexesById()
-    })
-
-    const lexemesIdsInProcessOrder = Object.values(lexemeIdsByPrecedence).reverse()
 
     const operatorTypes = {
       // Order doesn't matter
@@ -100,101 +228,77 @@ const parse = ({ lexemes, blockIds }) => {
       ternaryElse: "prefixUrnary",
     }
 
-    lexemesIdsInProcessOrder.forEach(id => {
-      const index = nodeIndexesById[id]
-      const lexeme = sourceTreeInProgress[index]
-      if (lexeme.content === "call") {
-        console.log(lexeme.content)
+    nodesInProcessOrder.forEach(node => {
+      if (node.name === "function") {
+        console.log()
       }
-      let sourceTreeNode
-      if (operatorTypes[lexeme.content] === "midfixBinary") {
-        sourceTreeNode = {
-          id,
-          content: [
-            lexeme.content,
-            sourceTreeInProgress[index - 1],
-            sourceTreeInProgress[index + 1],
-          ],
-        }
-        sourceTreeInProgress.splice(index - 1, 3, sourceTreeNode)
-      } else if (operatorTypes[lexeme.content] === "prefixUrnary") {
-        sourceTreeNode = {
-          id,
-          content: [lexeme.content, sourceTreeInProgress[index + 1]],
-        }
-        sourceTreeInProgress.splice(index, 2, sourceTreeNode)
-      } else if (operatorTypes[lexeme.content] === "midfixTernary1") {
-        sourceTreeNode = {
-          id: id,
-          content: [
-            lexeme.content,
-            {
-              id: getId(),
-              content: sourceTreeInProgress[index - 1],
-            },
-            {
-              id: getId(),
-              content: sourceTreeInProgress[index + 1],
-            },
-            {
-              id: getId(),
-              content: sourceTreeInProgress[index + 2],
-            },
-          ],
-        }
-        sourceTreeInProgress.splice(index - 1, 3, ...sourceTreeNodes)
-      } else if (operatorTypes[lexeme.content] === "specialOperatorIf") {
-        let condition = sourceTreeInProgress[index + 1]
-        let then = sourceTreeInProgress[index + 2]
-        let elseNode
+      if (operatorTypes[node.name] === "midfixBinary") {
+        createOperatorNode({
+          nodesBefore: [node.previousSibling],
+          operatorNode: node,
+          nodesAfter: [node.nextSibling],
+        })
+      } else if (operatorTypes[node.name] === "prefixUrnary") {
+        createOperatorNode({
+          operatorNode: node,
+          nodesAfter: [node.nextSibling],
+        })
+      } else if (operatorTypes[node.name] === "midfixTernary1") {
+        const nextSibling = node.nextSibling
+
+        createOperatorNode({
+          nodesBefore: [node.previousSibling],
+          operatorNode: node,
+          nodesAfter: [nextSibling, nextSibling.nextSibling],
+        })
+      } else if (operatorTypes[node.name] === "specialOperatorIf") {
+        const parent = node.parent
+
+        const nodesAfter = [parent.content[node.index + 1], parent.content[node.index + 2]]
+
         let elseNodeIndex = 3
         while (true) {
-          if (sourceTreeInProgress[elseNodeIndex]?.content[0] === "else") {
-            elseNode = sourceTreeInProgress[index + elseNodeIndex]
-            elseNodeIndex += 1
+          // TODO: else if
+          if (parent.content[elseNodeIndex]?.name === "else") {
+            nodesAfter.push(parent.content[node.index + elseNodeIndex])
             break
           }
 
           break
         }
-        let content = ["if", condition, then]
-        if (elseNode) {
-          content.push(elseNode)
-        }
-        sourceTreeNode = { id, content }
-        sourceTreeInProgress.splice(index, elseNodeIndex, sourceTreeNode)
+
+        createOperatorNode({
+          operatorNode: node,
+          nodesAfter,
+        })
       } else {
         throw new Error(`Failed to process operator "${lexeme.content}"`)
       }
-      refreshNodeIndexesById()
     })
+  })
 
-    return sourceTreeInProgress
-  }
-
-  const sourceTreeInProgress = recurse({ lexemes, blockIds })
+  console.log(sourceTreeInProgress)
 
   if (sourceTreeInProgress.length > 1) {
     throw new Error(`Failed to process operator`)
   }
 
-  const sourceTreeRaw = sourceTreeInProgress[0]
+  const sourceTreeRaw = sourceTreeInProgress.content[0]
 
-  const stripIds = sourceTreeNode => {
+  const convertToShorthand = sourceTreeNode => {
     if (sourceTreeNode.content) {
-      const lexemeDetected = !Array.isArray(sourceTreeNode.content)
-      if (lexemeDetected) {
+      if (sourceTreeNode.type === "lexeme") {
         throw new Error(`Failed to process operator "${sourceTreeNode.content}"`)
       }
       return [
-        sourceTreeNode.content[0],
-        ...sourceTreeNode.content.slice(1).map(sourceTreeNode => stripIds(sourceTreeNode)),
+        sourceTreeNode.name,
+        ...sourceTreeNode.content.map(sourceTreeNode => convertToShorthand(sourceTreeNode)),
       ]
     }
     return sourceTreeNode
   }
 
-  const sourceTree = stripIds(sourceTreeRaw)
+  const sourceTree = convertToShorthand(sourceTreeRaw)
 
   return sourceTree
 }
