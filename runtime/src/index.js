@@ -37,6 +37,22 @@ scope.add(
   })()
 )
 
+const createControlFlow = () => {
+  let isReturning = false
+
+  return {
+    getIsReturning: () => isReturning,
+    triggerReturn: () => {
+      isReturning = true
+    },
+    completeReturn: () => {
+      isReturn = false
+    },
+  }
+}
+
+const controlFlow = createControlFlow()
+
 const core = {
   name: nameString => {
     return scope.get(nameString)
@@ -145,19 +161,38 @@ const core = {
   parameters: () => {
     throw new Error("Syntax error") // Only meant to be executed in function node
   },
-  statements: (...nodes) => {
-    nodes.forEach(node => {
-      execute(node)
-    })
-  },
   call: (nameNode, argumentsNode) => {
     const args = execute(argumentsNode)
     const functionValue = execute(nameNode)
     return bootstrap.call(functionValue, args)
   },
   arguments: (...nodes) => {
-    const results = nodes.map(node => execute(node))
+    const positional = []
+    nodes.forEach(node => {
+      if (node[0] === "named") throw new Error("Not implemented")
+      const result = execute(node)
+      positional.push(result)
+    })
+    const results = { positional }
     return results
+  },
+  return: node => {
+    controlFlow.triggerReturn()
+    return execute(node)
+  },
+  statements: (...nodes) => {
+    for (const node of nodes) {
+      const returnValue = execute(node)
+      if (controlFlow.isReturning) {
+        controlFlow.completeReturn()
+        return returnValue
+      }
+    }
+  },
+  file: (...nodes) => {
+    nodes.forEach(node => {
+      execute(node)
+    })
   },
   // value = getValue()
   // myObject.&value = getValue()
@@ -230,7 +265,7 @@ const core = {
         index += 1
       } else if (node[0] === "named") {
         const nameString = node[1]
-        result = (() => {
+        const result = (() => {
           // myObject = [myName: myNameValue]
           if (node[2]) return execute(node[2])
           // myObject = [myName:]
@@ -263,6 +298,133 @@ const runtime = {
   execute,
 }
 
+/* prettier-ignore */
+const compiled = [
+  "file",
+  [
+    "assign",
+    [
+      "name",
+      "expect"
+    ],
+    [
+      "function",
+      [
+        "parameters",
+        [
+          "name",
+          "value1"
+        ]
+      ],
+      [
+        "statements",
+        [
+          "return",
+          [
+            "object",
+            [
+              "named",
+              [
+                "name",
+                "toEqual"
+              ],
+              [
+                "function",
+                [
+                  "parameters",
+                  [
+                    "name",
+                    "value2"
+                  ]
+                ],
+                [
+                  "statements",
+                  [
+                    "if",
+                    [
+                      "equals",
+                      [
+                        "name",
+                        "value1"
+                      ],
+                      [
+                        "name",
+                        "value2"
+                      ]
+                    ],
+                    [
+                      "statements",
+                      [
+                        "call",
+                        [
+                          "name",
+                          "log"
+                        ],
+                        [
+                          "arguments",
+                          [
+                            "string",
+                            [
+                              "stringContent",
+                              "'PASS: {value1} == {value2}'"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "else",
+                      [
+                        "statements",
+                        [
+                          "call",
+                          [
+                            "name",
+                            "log"
+                          ],
+                          [
+                            "arguments",
+                            [
+                              "string",
+                              [
+                                "stringContent",
+                                "'FAIL: {value1} == {value2}'"
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  ["call",
+    ["call",
+      ["name", "expect"],
+      ["read",
+        ["arguments",
+          ["number", "99"]
+        ],
+        ["name", "toEqual"]
+      ]
+    ],
+    [
+      "arguments",
+      [
+        "number",
+        "99"
+      ]
+    ]
+  ]
+]
+
+/*
 const compiled = [
   "statements",
   [
@@ -284,6 +446,7 @@ const compiled = [
   ],
   ["call", ["name", "log"], ["arguments", ["name", "result"]]],
 ]
+*/
 
 /* prettier-ignore */
 // const compiled = (

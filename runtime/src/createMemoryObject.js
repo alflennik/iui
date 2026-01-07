@@ -135,10 +135,10 @@ const createMemoryObject = () => {
       return values[values.storageType]
     },
     setIndex: (index, memoryObject) => {
-      objectIndexes[index] = memoryObject
+      values.objectIndexes[index] = memoryObject
     },
     setName: (nameString, memoryObject) => {
-      objectFields.set(nameString, memoryObject)
+      values.objectFields.set(nameString, memoryObject)
     },
   }
 

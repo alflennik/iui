@@ -25,6 +25,8 @@ const compile = sourceCode => {
   console.log(JSON.stringify(sourceTree, null, 2))
   console.log(prettyFormatSourceTree(sourceTree))
 
+  console.log(JSON.stringify(sourceTree, null, 2))
+
   return sourceTree
 }
 

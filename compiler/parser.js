@@ -32,9 +32,6 @@ const parse = ({ lexemes, blockIds }) => {
 
     const createBlockNode = ({ startNode, endNode }) => {
       const blockName = startNode.name.match(/^(.+)Start$/)[1]
-      if (blockName === "parameters" && endNode.index - startNode.index > 3) {
-        console.log()
-      }
 
       const firstNode = startNode.nextSibling
       const lastNode = endNode.previousSibling
@@ -137,16 +134,75 @@ const parse = ({ lexemes, blockIds }) => {
       }
     }
 
+    const moveNode = ({ node, before: beforeNode }) => {
+      const index1 = node.index
+      const previousSibling1 = node.previousSibling
+      const nextSibling1 = node.nextSibling
+      const parent1 = node.parent
+      parent1.content.splice(node.index, 1)
+
+      const index2 = beforeNode.index + 1
+      const nextSibling2 = beforeNode.nextSibling
+      const parent2 = beforeNode.parent
+      parent2.content.splice(index2, 0, node)
+
+      node.parent = parent2
+      node.index = index2
+      node.previousSibling = beforeNode
+      node.nextSibling = nextSibling2
+
+      if (previousSibling1) previousSibling1.nextSibling = nextSibling1
+      if (nextSibling1) nextSibling1.previousSibling = previousSibling1
+
+      beforeNode.nextSibling = node
+      if (nextSibling2) nextSibling2.previousSibling = node
+      node.nextSibling = nextSibling2
+
+      for (let i = index1; i < parent1.content.length; i += 1) {
+        parent1.content[i].index = i
+      }
+
+      if (parent1 !== parent2 || index1 < index2) {
+        for (let i = index2; i < parent2.content.length; i += 1) {
+          parent2.content[i].index = i
+        }
+      }
+    }
+
+    const removeNode = ({ node }) => {
+      const parent = node.parent
+
+      parent.content.splice(node.index, 1)
+      idToNodeMap.delete(node.id)
+
+      const previousSibling = node.previousSibling
+      const nextSibling = node.nextSibling
+      if (previousSibling) previousSibling.nextSibling = nextSibling
+      if (nextSibling) nextSibling.previousSibling = previousSibling
+
+      for (let i = node.index; i < parent.content.length; i += 1) {
+        parent.content[i].index = i
+      }
+    }
+
     return {
       sourceTreeInProgress,
       getById,
       createOperatorNode,
       createBlockNode,
+      moveNode,
+      removeNode,
     }
   }
 
-  const { sourceTreeInProgress, getById, createOperatorNode, createBlockNode } =
-    createSourceTreeInProgress({ lexemes: deepClone(lexemes) })
+  const {
+    sourceTreeInProgress,
+    getById,
+    createOperatorNode,
+    createBlockNode,
+    moveNode,
+    removeNode,
+  } = createSourceTreeInProgress({ lexemes: deepClone(lexemes) })
 
   const blocksToParse = []
 
@@ -161,8 +217,9 @@ const parse = ({ lexemes, blockIds }) => {
     const matchersInOrderOfPrecedence = [
       { match: /^stringContent/, ignoreForPrecedence: true },
       { match: /^(name|number)$/, ignoreForPrecedence: true },
+      { match: /^dotRight$/ }, // Dots have asymmetrical precedence on their left and right
       { match: /^call$/ },
-      { match: /^read$/ },
+      { match: /^dotLeft$/ },
       { match: /^multiply$/ },
       { match: /^add$/ },
       { match: /^equals$/ },
@@ -216,22 +273,22 @@ const parse = ({ lexemes, blockIds }) => {
       add: "midfixBinary",
       assign: "midfixBinary",
       call: "midfixBinary",
+      dotLeft: "specialOperatorDotLeft",
+      dotRight: "specialOperatorDotRight",
       else: "prefixUrnary",
       equals: "midfixBinary",
       function: "midfixBinary",
       if: "specialOperatorIf",
       multiply: "midfixBinary",
       named: "midfixBinary",
-      read: "midfixBinary",
       return: "prefixUrnary",
       ternary: "midfixTernary1",
       ternaryElse: "prefixUrnary",
     }
 
+    const dotLeftIdToRightId = {}
+
     nodesInProcessOrder.forEach(node => {
-      if (node.name === "function") {
-        console.log()
-      }
       if (operatorTypes[node.name] === "midfixBinary") {
         createOperatorNode({
           nodesBefore: [node.previousSibling],
@@ -251,6 +308,26 @@ const parse = ({ lexemes, blockIds }) => {
           operatorNode: node,
           nodesAfter: [nextSibling, nextSibling.nextSibling],
         })
+      } else if (operatorTypes[node.name] === "specialOperatorDotRight") {
+        // Bind the right node to dotRight, leaving dotLeft to bind later with a lower precedence
+        dotLeftIdToRightId[node.previousSibling.id] = node.id
+        createOperatorNode({
+          operatorNode: node,
+          nodesAfter: [node.nextSibling],
+        })
+      } else if (operatorTypes[node.name] === "specialOperatorDotLeft") {
+        // The dotRight node has already been created since it has a higher precedence, and it may
+        // have already moved around the syntax tree due to other nodes being created in the
+        // meantime
+        const dotRightNode = getById(dotLeftIdToRightId[node.id])
+
+        // No need to create an operator node since dotRight already exists
+        moveNode({ node: node.previousSibling, before: dotRightNode.content[0] })
+        removeNode({ node })
+
+        // The lexeme name is "dotRight", but the final syntax tree name is either "read" or "enum"
+        // TODO: implement enum
+        dotRightNode.name = "read"
       } else if (operatorTypes[node.name] === "specialOperatorIf") {
         const parent = node.parent
 

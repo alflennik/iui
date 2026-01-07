@@ -108,7 +108,12 @@ const lex = tokens => {
     }
 
     if (token.content === ".") {
-      lexemes.push({ id: getId(), content: "read" })
+      // The dot lexeme will eventually become either "read" or "enum" in the final syntax tree.
+      // dotLeft is needed because dots have asymmetrical precedence on their left and right sides.
+      // dotLeft is also used to disambiguate "read" from "enum" (if the dot starts an expression
+      // then it is an enum.)
+      lexemes.push({ id: getId(), content: "dotLeft" })
+      lexemes.push({ id: getId(), content: "dotRight" })
       continue
     }
 
