@@ -219,7 +219,7 @@ const parse = ({ lexemes, blockIds }) => {
       { match: /^(name|number)$/, ignoreForPrecedence: true },
       { match: /^dotRight$/ }, // Dots have asymmetrical precedence on their left and right
       { match: /^call$/ },
-      { match: /^dotLeft$/ },
+      { match: /^dotLeft$/ }, // Dots have asymmetrical precedence on their left and right
       { match: /^multiply$/ },
       { match: /^add$/ },
       { match: /^equals$/ },
@@ -360,24 +360,26 @@ const parse = ({ lexemes, blockIds }) => {
     throw new Error(`Failed to process operator`)
   }
 
-  const sourceTreeRaw = sourceTreeInProgress.content[0]
+  const sourceTreeData = sourceTreeInProgress.content[0]
 
-  const convertToShorthand = sourceTreeNode => {
-    if (sourceTreeNode.content) {
-      if (sourceTreeNode.type === "lexeme") {
-        throw new Error(`Failed to process operator "${sourceTreeNode.content}"`)
+  const convertToSyntaxTree = sourceTreeDataNode => {
+    if (sourceTreeDataNode.content) {
+      if (sourceTreeDataNode.type === "lexeme") {
+        throw new Error(`Failed to process operator "${sourceTreeDataNode.content}"`)
       }
       return [
-        sourceTreeNode.name,
-        ...sourceTreeNode.content.map(sourceTreeNode => convertToShorthand(sourceTreeNode)),
+        sourceTreeDataNode.name,
+        ...sourceTreeDataNode.content.map(sourceTreeDataNode =>
+          convertToSyntaxTree(sourceTreeDataNode)
+        ),
       ]
     }
-    return sourceTreeNode
+    return sourceTreeDataNode
   }
 
-  const sourceTree = convertToShorthand(sourceTreeRaw)
+  const syntaxTree = convertToSyntaxTree(sourceTreeData)
 
-  return sourceTree
+  return syntaxTree
 }
 
 const deepClone = data => JSON.parse(JSON.stringify(data))

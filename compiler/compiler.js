@@ -6,7 +6,9 @@ const compile = sourceCode => {
   console.log(sourceCode)
 
   const tokens = tokenize(sourceCode)
-  console.log(tokens.map(token => token.content).join("•"))
+  console.log(
+    tokens.map(token => (token.stringContent ? token.stringContent : token.content)).join("•")
+  )
 
   const { lexemes, blockIds } = lex(tokens)
 

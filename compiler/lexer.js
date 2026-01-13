@@ -54,6 +54,13 @@ const lex = tokens => {
     }
 
     if (token.content === "{") {
+      if (openBlocks.at(-1)?.[1].endsWith("stringStart")) {
+        const id = getId()
+        openBlocks.push([id, "stringReplacementStart"])
+        lexemes.push({ id, content: "stringReplacementStart" })
+        continue
+      }
+
       const id = getId()
       openBlocks.push([id, "statementsStart"])
       lexemes.push({ id, content: "statementsStart" })
@@ -61,6 +68,14 @@ const lex = tokens => {
     }
 
     if (token.content === "}") {
+      if (openBlocks.at(-1)?.[1] === "stringReplacementStart") {
+        const [blockStartId] = openBlocks.pop()
+        const id = getId()
+        blockIds.push([blockStartId, id])
+        lexemes.push({ id, content: "stringReplacementEnd" })
+        continue
+      }
+
       const [blockStartId, blockOpenedAs] = openBlocks.pop()
       const id = getId()
       if (!blockStartId || blockOpenedAs !== "statementsStart") throw new Error("Mismatched braces")
@@ -71,15 +86,23 @@ const lex = tokens => {
       continue
     }
 
-    if (token.content.startsWith('"') || token.content.startsWith("'")) {
-      const blockStartId = getId()
-      const blockEndId = getId()
-      blockIds.push([blockStartId, blockEndId])
-      lexemes.push(
-        { id: blockStartId, content: "stringStart" },
-        { id: getId(), content: ["stringContent", token.content] },
-        { id: blockEndId, content: "stringEnd" }
-      )
+    if (token.content.match(/\**['"]\**/)) {
+      if (openBlocks.at(-1)?.[1] === "stringStart") {
+        const [blockStartId] = openBlocks.pop()
+        const id = getId()
+        blockIds.push([blockStartId, id])
+        lexemes.push({ id, content: "stringEnd" })
+        continue
+      } else {
+        const id = getId()
+        openBlocks.push([id, "stringStart"])
+        lexemes.push({ id, content: "stringStart" })
+        continue
+      }
+    }
+
+    if (token.stringContent !== undefined) {
+      lexemes.push({ id: getId(), content: ["stringContent", token.stringContent] })
       continue
     }
 

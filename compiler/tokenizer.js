@@ -3,8 +3,60 @@ const getId = require("../utilities/getId")
 const tokenize = sourceCode => {
   const matchers = [
     // strings
-    { match: /^"[^"]*"/ },
-    { match: /^'[^']*'/ },
+    ...(() => {
+      const stringMatchers = []
+
+      const stringCharacters = ['"', "'" /* , "`" */]
+      const levels = ["", "*" /* , '**', '***', '****', '*****' */]
+
+      stringCharacters.forEach(stringCharacter => {
+        levels.forEach(level => {
+          const levelFormatted = level
+            .split("")
+            .map(char => `\\${char}`)
+            .join("")
+
+          stringMatchers.push(
+            // something"
+            // Ending the string needs to come before starting the string because otherwise every
+            // level 0 quote would count as starting a new string
+            {
+              match: `^${stringCharacter}${levelFormatted}`,
+              tokenizerMode: `${level}${stringCharacter}string`,
+              endTokenizerMode: true,
+            },
+            // "something
+            {
+              match: `^${levelFormatted}${stringCharacter}`,
+              startTokenizerMode: `${level}${stringCharacter}string`,
+            },
+            // "Hello, *{username}"
+            {
+              match: `^${levelFormatted}{`,
+              tokenizerMode: `${level}${stringCharacter}string`,
+              startTokenizerMode: `${level}stringReplacement`,
+            },
+            // The }, world" in "{greeting}, world"
+            {
+              match: /^}/,
+              tokenizerMode: `${level}stringReplacement`,
+              endTokenizerMode: true,
+            },
+            // String content where anything is allowed except the replacement or end string syntax
+            {
+              match: `(.*?)(?:(${stringCharacter}${levelFormatted}|${levelFormatted}{))`,
+              tokenizerMode: `${level}${stringCharacter}string`,
+              // Since the tokenizer already produces an array of strings, there needs to be a way
+              // to distinguish source code from string content, otherwise they would get confused
+              contentType: "stringContent",
+            }
+          )
+        })
+      })
+
+      return stringMatchers
+    })(),
+
     // any names, type name or keywords
     { match: /^&?[a-zA-Z][a-zA-Z0-9]*/ },
     // numbers which can include underscores (not at the beginning or end) and one dot (not at end)
@@ -27,6 +79,8 @@ const tokenize = sourceCode => {
   let tokens = []
   let remainingSourceCode = sourceCode
 
+  const tokenizerModes = []
+
   let safetySwitch = 0
 
   while (remainingSourceCode.length) {
@@ -34,12 +88,27 @@ const tokenize = sourceCode => {
 
     let success = false
 
+    const tokenizerMode = tokenizerModes.at(-1)
+
     for (matcher of matchers) {
+      if (matcher.tokenizerMode && tokenizerMode !== matcher.tokenizerMode) continue
+
       const match = remainingSourceCode.match(matcher.match)
       if (match) {
-        tokens.push({ id: getId(), content: match[0] })
-        remainingSourceCode = remainingSourceCode.substring(match[0].length)
+        let content = match[1] !== undefined ? match[1] : match[0]
+
+        remainingSourceCode = remainingSourceCode.substring(content.length)
+
+        if (matcher.contentType) {
+          tokens.push({ id: getId(), [matcher.contentType]: content, content: "" })
+        } else {
+          tokens.push({ id: getId(), content })
+        }
+
         success = true
+
+        if (matcher.startTokenizerMode) tokenizerModes.push(matcher.startTokenizerMode)
+        if (matcher.endTokenizerMode) tokenizerModes.pop()
         break
       }
     }
@@ -55,6 +124,10 @@ const tokenize = sourceCode => {
 
   if (remainingSourceCode) {
     throw new Error("Failed to parse")
+  }
+
+  if (tokenizerModes.length) {
+    throw new Error("Syntax error")
   }
 
   return tokens
