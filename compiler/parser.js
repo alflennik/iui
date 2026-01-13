@@ -134,29 +134,29 @@ const parse = ({ lexemes, blockIds }) => {
       }
     }
 
-    const moveNode = ({ node, before: beforeNode }) => {
+    const moveNode = ({ node, before: afterNode }) => {
       const index1 = node.index
       const previousSibling1 = node.previousSibling
       const nextSibling1 = node.nextSibling
       const parent1 = node.parent
       parent1.content.splice(node.index, 1)
 
-      const index2 = beforeNode.index + 1
-      const nextSibling2 = beforeNode.nextSibling
-      const parent2 = beforeNode.parent
+      const index2 = afterNode.index
+      const previousSibling2 = afterNode.previousSibling
+      const parent2 = afterNode.parent
       parent2.content.splice(index2, 0, node)
 
       node.parent = parent2
       node.index = index2
-      node.previousSibling = beforeNode
-      node.nextSibling = nextSibling2
+      node.previousSibling = previousSibling2
+      node.nextSibling = afterNode
 
       if (previousSibling1) previousSibling1.nextSibling = nextSibling1
       if (nextSibling1) nextSibling1.previousSibling = previousSibling1
 
-      beforeNode.nextSibling = node
-      if (nextSibling2) nextSibling2.previousSibling = node
-      node.nextSibling = nextSibling2
+      afterNode.previousSibling = node
+      if (previousSibling2) previousSibling2.nextSibling = node
+      node.previousSibling = previousSibling2
 
       for (let i = index1; i < parent1.content.length; i += 1) {
         parent1.content[i].index = i
@@ -263,10 +263,6 @@ const parse = ({ lexemes, blockIds }) => {
     }
 
     const nodesInProcessOrder = Object.values(nodesByPrecedence).flat()
-
-    if (nodesInProcessOrder?.length > 2) {
-      console.log()
-    }
 
     const operatorTypes = {
       // Order doesn't matter

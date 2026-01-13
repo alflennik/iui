@@ -42,6 +42,15 @@ const createMemoryObject = () => {
       // future values alike continue to be shared
       values = object[valuesSymbol]
     },
+    assignEmptyObject: () => {
+      Object.keys(values).map(key => {
+        if (key === "storageType") {
+          values.storageType = "object"
+        } else {
+          values[key] = defaultValues[key]
+        }
+      })
+    },
     assignString: basicString => {
       Object.keys(values).map(key => {
         if (key === "storageType") {
@@ -93,7 +102,7 @@ const createMemoryObject = () => {
       })
     },
     read: nameString => {
-      result = values.objectFields.get(nameString)
+      const result = values.objectFields.get(nameString)
       if (result === undefined) return null
       return result
     },

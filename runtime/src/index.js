@@ -46,7 +46,7 @@ const createControlFlow = () => {
       isReturning = true
     },
     completeReturn: () => {
-      isReturn = false
+      isReturning = false
     },
   }
 }
@@ -151,8 +151,9 @@ const core = {
       })
 
       if (statementsNode[0] !== "statements") throw new Error("Syntax error")
-      execute(statementsNode)
+      const returnValue = execute(statementsNode)
       scope.exit()
+      return returnValue
     }
     const memoryObject = createMemoryObject()
     memoryObject.assignFunction(functionValue)
@@ -183,7 +184,7 @@ const core = {
   statements: (...nodes) => {
     for (const node of nodes) {
       const returnValue = execute(node)
-      if (controlFlow.isReturning) {
+      if (controlFlow.getIsReturning()) {
         controlFlow.completeReturn()
         return returnValue
       }
@@ -257,6 +258,7 @@ const core = {
   },
   object: (...nodes) => {
     const memoryObject = createMemoryObject()
+    memoryObject.assignEmptyObject()
     let index = 0
     nodes.forEach(node => {
       if (node[0] === "name") {
@@ -264,7 +266,7 @@ const core = {
         memoryObject.setIndex(index, result)
         index += 1
       } else if (node[0] === "named") {
-        const nameString = node[1]
+        const nameString = node[1][1]
         const result = (() => {
           // myObject = [myName: myNameValue]
           if (node[2]) return execute(node[2])
@@ -366,7 +368,25 @@ const compiled = [
                             "string",
                             [
                               "stringContent",
-                              "'PASS: {value1} == {value2}'"
+                              "PASS: "
+                            ],
+                            [
+                              "stringReplacement",
+                              [
+                                "name",
+                                "value1"
+                              ]
+                            ],
+                            [
+                              "stringContent",
+                              " == "
+                            ],
+                            [
+                              "stringReplacement",
+                              [
+                                "name",
+                                "value2"
+                              ]
                             ]
                           ]
                         ]
@@ -388,7 +408,25 @@ const compiled = [
                               "string",
                               [
                                 "stringContent",
-                                "'FAIL: {value1} == {value2}'"
+                                "FAIL: "
+                              ],
+                              [
+                                "stringReplacement",
+                                [
+                                  "name",
+                                  "value1"
+                                ]
+                              ],
+                              [
+                                "stringContent",
+                                " == "
+                              ],
+                              [
+                                "stringReplacement",
+                                [
+                                  "name",
+                                  "value2"
+                                ]
                               ]
                             ]
                           ]
@@ -404,14 +442,27 @@ const compiled = [
       ]
     ]
   ],
-  ["call",
-    ["call",
-      ["name", "expect"],
-      ["read",
-        ["arguments",
-          ["number", "99"]
+  [
+    "call",
+    [
+      "read",
+      [
+        "call",
+        [
+          "name",
+          "expect"
         ],
-        ["name", "toEqual"]
+        [
+          "arguments",
+          [
+            "number",
+            "99"
+          ]
+        ]
+      ],
+      [
+        "name",
+        "toEqual"
       ]
     ],
     [
