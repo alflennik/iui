@@ -15,7 +15,9 @@ const internalPrecision = officialPrecision + extraDigitsOfHiddenPrecision
 const createExecute = core => {
   return node => {
     const coreFunction = core[node[0]]
-    if (!coreFunction) throw new Error(`Invalid Syntax at ${node[0]}`)
+    if (!coreFunction) {
+      throw new Error(`Invalid Syntax at ${node[0]}`)
+    }
     return coreFunction(...node.slice(1))
   }
 }
@@ -80,6 +82,7 @@ const bootstrap = {
       }
     }
   },
+  log: console.log,
 }
 
 export { createExecute, setExecute }

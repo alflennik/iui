@@ -1,41 +1,44 @@
 import createMemoryObject from "./createMemoryObject.js"
 import bootstrap, { createExecute, setExecute } from "./bootstrap.js"
+import getBaseFields from "./baseFields.js"
+import standardLibrary from "./standardLibrary.js"
 
 const createScope = () => {
-  const blocks = [{ id: bootstrap.getRandomNumber().toString().slice(2), names: {} }]
+  const blocks = [{ id: bootstrap.getRandomNumber().toString().slice(2), parent: null, names: {} }]
 
   return {
-    enter: () => {
+    enter: ({ parent } = {}) => {
       const id = bootstrap.getRandomNumber().toString().slice(2)
-      blocks.push({ id, names: {} })
+      blocks.push({ id, parent: parent || blocks.at(-1), names: {} })
     },
     add: (nameString, value) => {
       const currentBlock = blocks.at(-1)
       currentBlock.names[nameString] = value
     },
     get: nameString => {
-      let depth = blocks.length - 1
-      while (depth >= 0) {
-        const result = blocks[depth].names[nameString]
+      let block = blocks.at(-1)
+      while (block) {
+        const result = block.names[nameString]
         if (result) return result
-        depth -= 1
+        block = block.parent
       }
     },
+    closure: () => {
+      return blocks.at(-1)
+    },
     exit: () => {
-      delete blocks[blocks.length - 1]
+      blocks.pop()
     },
   }
 }
+
 const scope = createScope()
 
-scope.add(
-  "log",
-  (() => {
-    const memoryObject = createMemoryObject()
-    memoryObject.assignFunction(console.log)
-    return memoryObject
-  })()
-)
+Object.entries(standardLibrary).map(([name, functionValue]) => {
+  const memoryObject = createMemoryObject()
+  memoryObject.assignFunction(functionValue)
+  scope.add(name, memoryObject)
+})
 
 const createControlFlow = () => {
   let isReturning = false
@@ -128,8 +131,10 @@ const core = {
     scope.exit()
   },
   function: (parametersNode, statementsNode) => {
+    const parentScope = scope.closure()
+
     const functionValue = args => {
-      scope.enter()
+      scope.enter({ parent: parentScope })
 
       if (parametersNode[0] !== "parameters") throw new Error("Syntax error")
 
@@ -191,9 +196,13 @@ const core = {
     }
   },
   file: (...nodes) => {
+    scope.enter()
+
     nodes.forEach(node => {
       execute(node)
     })
+
+    scope.exit()
   },
   // value = getValue()
   // myObject.&value = getValue()
@@ -235,7 +244,7 @@ const core = {
       return execute(elseNode[1])
     }
   },
-  ifStatement: (conditionNode, thenNode, ...elseIfNodes) => {
+  if: (conditionNode, thenNode, ...elseIfNodes) => {
     return bootstrap.if(conditionNode, thenNode, ...elseIfNodes)
   },
   // TODO:
@@ -249,12 +258,16 @@ const core = {
       if (node[0] === "stringContent") {
         output += node[1]
       } else if (node[0] === "stringReplacement") {
-        output += execute(node[1])
+        const result = execute(node[1])
+        const baseFields = getBaseFields(result)
+        output += baseFields.toString()
       } else {
         throw new Error("Syntax error")
       }
     })
-    return output
+    const memoryObject = createMemoryObject()
+    memoryObject.assignString(output)
+    return memoryObject
   },
   object: (...nodes) => {
     const memoryObject = createMemoryObject()
