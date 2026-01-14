@@ -5,12 +5,12 @@ import createMemoryObject from "./createMemoryObject.js"
 const getRandomNumber = () => cryptoRandom.value()
 
 // A BigInt can have up to 19 decimal digits fit into 64 bits of value storage
-const officialPrecision = 18 // largest possible number is 999 quadrillion
+export const officialPrecision = 18 // largest possible number is 999 quadrillion
 
 // Enables digits of rounding, so 1/3 + 1/3 + 1/3 = 1 instead of 0.9999999
-const extraDigitsOfHiddenPrecision = 1
+export const extraDigitsOfHiddenPrecision = 1
 
-const internalPrecision = officialPrecision + extraDigitsOfHiddenPrecision
+export const internalPrecision = officialPrecision + extraDigitsOfHiddenPrecision
 
 const createExecute = core => {
   return node => {
