@@ -405,7 +405,7 @@
         }
         return result2;
       };
-      var fpFromDecimal2 = (src, dstPrecision) => {
+      var fpFromDecimal3 = (src, dstPrecision) => {
         const _dstPrecision = BigInt(dstPrecision);
         if (typeof src === "bigint") {
           return new FixedPoint_1.FixedPoint(pow10(src, _dstPrecision), _dstPrecision);
@@ -443,7 +443,7 @@
         }
         return new FixedPoint_1.FixedPoint(base, _dstPrecision);
       };
-      exports.fpFromDecimal = fpFromDecimal2;
+      exports.fpFromDecimal = fpFromDecimal3;
       var fpFromInt = (src, srcPrecision, dstPrecision) => {
         const _srcPrecision = BigInt(srcPrecision);
         const _dstPrecision = BigInt(dstPrecision);
@@ -582,6 +582,15 @@
       assignObject: (object) => {
         values = object[valuesSymbol];
       },
+      assignEmptyObject: () => {
+        Object.keys(values).map((key) => {
+          if (key === "storageType") {
+            values.storageType = "object";
+          } else {
+            values[key] = defaultValues[key];
+          }
+        });
+      },
       assignString: (basicString) => {
         Object.keys(values).map((key) => {
           if (key === "storageType") {
@@ -633,9 +642,9 @@
         });
       },
       read: (nameString2) => {
-        result = values.objectFields.get(nameString2);
-        if (result === void 0) return null;
-        return result;
+        const result2 = values.objectFields.get(nameString2);
+        if (result2 === void 0) return null;
+        return result2;
       },
       access: (memoryObject) => {
         accessValues = memoryObject[valuesSymbol];
@@ -674,10 +683,10 @@
         return values[values.storageType];
       },
       setIndex: (index, memoryObject) => {
-        objectIndexes[index] = memoryObject;
+        values.objectIndexes[index] = memoryObject;
       },
       setName: (nameString2, memoryObject) => {
-        objectFields.set(nameString2, memoryObject);
+        values.objectFields.set(nameString2, memoryObject);
       }
     };
     return container;
@@ -694,7 +703,9 @@
   var createExecute = (core2) => {
     return (node) => {
       const coreFunction = core2[node[0]];
-      if (!coreFunction) throw new Error(`Invalid Syntax at ${node[0]}`);
+      if (!coreFunction) {
+        throw new Error(`Invalid Syntax at ${node[0]}`);
+      }
       return coreFunction(...node.slice(1));
     };
   };
@@ -756,44 +767,104 @@
           throw new Error("Syntax error");
         }
       }
-    }
+    },
+    log: console.log
   };
   var bootstrap_default = bootstrap;
 
+  // baseFields.js
+  var import_fixed_point2 = __toESM(require_dist(), 1);
+  var getBaseFields = (memoryObject) => {
+    if (memoryObject.getStorageType() === "number") {
+      return {
+        toString: () => {
+          const removeTrailingZeros = (str) => {
+            return str.replace(/(^[0-9]+\..*?)(0+$)/, "$1").replace(/\.$/, "");
+          };
+          const roundOffPrecisionDigits = (fixedPointNumber) => {
+            const digitsOfOfficialPrecision = (0, import_fixed_point2.fpFromDecimal)(
+              `1${"0".repeat(officialPrecision - 1)}`,
+              internalPrecision
+            );
+            return fixedPointNumber.mul(digitsOfOfficialPrecision).round().div(digitsOfOfficialPrecision);
+          };
+          const hidePrecisionDigits = (str) => {
+            return str.slice(0, -extraDigitsOfHiddenPrecision);
+          };
+          return removeTrailingZeros(
+            hidePrecisionDigits(roundOffPrecisionDigits(memoryObject.getValue()).toDecimalString())
+          );
+        }
+      };
+    }
+    if (memoryObject.getStorageType() === "string") {
+      return {
+        toString: () => {
+          return memoryObject.getValue();
+        }
+      };
+    }
+    throw new Error("Not implemented");
+  };
+  var baseFields_default = getBaseFields;
+
+  // standardLibrary.js
+  var log = (args) => {
+    const memoryObject = args.positional[0];
+    const baseFields = baseFields_default(memoryObject);
+    bootstrap_default.log(baseFields.toString());
+  };
+  var standardLibrary_default = {
+    log
+  };
+
   // index.js
   var createScope = () => {
-    const blocks = [{ id: bootstrap_default.getRandomNumber().toString().slice(2), names: {} }];
+    const blocks = [{ id: bootstrap_default.getRandomNumber().toString().slice(2), parent: null, names: {} }];
     return {
-      enter: () => {
+      enter: ({ parent } = {}) => {
         const id = bootstrap_default.getRandomNumber().toString().slice(2);
-        blocks.push({ id, names: {} });
+        blocks.push({ id, parent: parent || blocks.at(-1), names: {} });
       },
       add: (nameString2, value) => {
         const currentBlock = blocks.at(-1);
         currentBlock.names[nameString2] = value;
       },
       get: (nameString2) => {
-        let depth = blocks.length - 1;
-        while (depth >= 0) {
-          const result2 = blocks[depth].names[nameString2];
+        let block = blocks.at(-1);
+        while (block) {
+          const result2 = block.names[nameString2];
           if (result2) return result2;
-          depth -= 1;
+          block = block.parent;
         }
       },
+      closure: () => {
+        return blocks.at(-1);
+      },
       exit: () => {
-        delete blocks[blocks.length - 1];
+        blocks.pop();
       }
     };
   };
   var scope = createScope();
-  scope.add(
-    "log",
-    (() => {
-      const memoryObject = createMemoryObject_default();
-      memoryObject.assignFunction(console.log);
-      return memoryObject;
-    })()
-  );
+  Object.entries(standardLibrary_default).map(([name, functionValue]) => {
+    const memoryObject = createMemoryObject_default();
+    memoryObject.assignFunction(functionValue);
+    scope.add(name, memoryObject);
+  });
+  var createControlFlow = () => {
+    let isReturning = false;
+    return {
+      getIsReturning: () => isReturning,
+      triggerReturn: () => {
+        isReturning = true;
+      },
+      completeReturn: () => {
+        isReturning = false;
+      }
+    };
+  };
+  var controlFlow = createControlFlow();
   var core = {
     name: (nameString2) => {
       return scope.get(nameString2);
@@ -866,8 +937,9 @@
       scope.exit();
     },
     function: (parametersNode, statementsNode) => {
+      const parentScope = scope.closure();
       const functionValue = (args) => {
-        scope.enter();
+        scope.enter({ parent: parentScope });
         if (parametersNode[0] !== "parameters") throw new Error("Syntax error");
         let index = 0;
         parametersNode.slice(1).forEach((node) => {
@@ -886,8 +958,9 @@
           }
         });
         if (statementsNode[0] !== "statements") throw new Error("Syntax error");
-        execute2(statementsNode);
+        const returnValue = execute2(statementsNode);
         scope.exit();
+        return returnValue;
       };
       const memoryObject = createMemoryObject_default();
       memoryObject.assignFunction(functionValue);
@@ -896,19 +969,40 @@
     parameters: () => {
       throw new Error("Syntax error");
     },
-    statements: (...nodes) => {
-      nodes.forEach((node) => {
-        execute2(node);
-      });
-    },
     call: (nameNode, argumentsNode) => {
       const args = execute2(argumentsNode);
       const functionValue = execute2(nameNode);
       return bootstrap_default.call(functionValue, args);
     },
     arguments: (...nodes) => {
-      const results = nodes.map((node) => execute2(node));
+      const positional = [];
+      nodes.forEach((node) => {
+        if (node[0] === "named") throw new Error("Not implemented");
+        const result2 = execute2(node);
+        positional.push(result2);
+      });
+      const results = { positional };
       return results;
+    },
+    return: (node) => {
+      controlFlow.triggerReturn();
+      return execute2(node);
+    },
+    statements: (...nodes) => {
+      for (const node of nodes) {
+        const returnValue = execute2(node);
+        if (controlFlow.getIsReturning()) {
+          controlFlow.completeReturn();
+          return returnValue;
+        }
+      }
+    },
+    file: (...nodes) => {
+      scope.enter();
+      nodes.forEach((node) => {
+        execute2(node);
+      });
+      scope.exit();
     },
     // value = getValue()
     // myObject.&value = getValue()
@@ -949,7 +1043,7 @@
         return execute2(elseNode[1]);
       }
     },
-    ifStatement: (conditionNode, thenNode, ...elseIfNodes) => {
+    if: (conditionNode, thenNode, ...elseIfNodes) => {
       return bootstrap_default.if(conditionNode, thenNode, ...elseIfNodes);
     },
     // TODO:
@@ -963,15 +1057,20 @@
         if (node[0] === "stringContent") {
           output += node[1];
         } else if (node[0] === "stringReplacement") {
-          output += execute2(node[1]);
+          const result2 = execute2(node[1]);
+          const baseFields = baseFields_default(result2);
+          output += baseFields.toString();
         } else {
           throw new Error("Syntax error");
         }
       });
-      return output;
+      const memoryObject = createMemoryObject_default();
+      memoryObject.assignString(output);
+      return memoryObject;
     },
     object: (...nodes) => {
       const memoryObject = createMemoryObject_default();
+      memoryObject.assignEmptyObject();
       let index = 0;
       nodes.forEach((node) => {
         if (node[0] === "name") {
@@ -979,12 +1078,12 @@
           memoryObject.setIndex(index, result2);
           index += 1;
         } else if (node[0] === "named") {
-          const nameString2 = node[1];
-          result = (() => {
+          const nameString2 = node[1][1];
+          const result2 = (() => {
             if (node[2]) return execute2(node[2]);
             return execute2(node[1]);
           })();
-          memoryObject.setName(nameString2, result);
+          memoryObject.setName(nameString2, result2);
         } else {
           throw new Error("Syntax error");
         }
@@ -1003,27 +1102,5 @@
     // fpFromDecimal,
     execute: execute2
   };
-  var compiled = [
-    "statements",
-    [
-      "assign",
-      ["name", "result"],
-      [
-        "ternary",
-        [
-          "condition",
-          [
-            "equals",
-            ["multiply", ["number", "3"], ["parentheses", ["add", ["number", "1"], ["number", "1"]]]],
-            ["number", "6"]
-          ]
-        ],
-        ["then", ["string", ["stringContent", '"fantastic"']]],
-        ["else", ["string", ["stringContent", '"huh?"']]]
-      ]
-    ],
-    ["call", ["name", "log"], ["arguments", ["name", "result"]]]
-  ];
-  execute2(compiled);
   globalThis.runtime = runtime;
 })();

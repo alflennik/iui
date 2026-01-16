@@ -28,7 +28,7 @@ const processFile = async () => {
   const fileExists = !!(await fs.stat(fullInputPath).catch(() => false))
 
   if (!fileExists) {
-    console.error(`Error: File '${inputFilePath}' does not exist`)
+    console.error(`File '${inputFilePath}' does not exist`)
     process.exit(1)
   }
 
