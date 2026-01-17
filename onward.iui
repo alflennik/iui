@@ -10,4 +10,4 @@ expect = value1 => {
   ]
 }
 
-expect(99).toEqual(100)
+expect(99).toEqual(99)

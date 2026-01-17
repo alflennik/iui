@@ -1,5 +1,53 @@
-const { fpFromDecimal, extraDigitsOfHiddenPrecision, internalPrecision, officialPrecision } =
-  runtime
+const {
+  fpFromDecimal,
+  extraDigitsOfHiddenPrecision,
+  internalPrecision,
+  officialPrecision,
+  bootstrap,
+} = runtime
+
+const createScope = () => {
+  const blocks = [{ id: bootstrap.getRandomNumber().toString().slice(2), parent: null, names: {} }]
+
+  return {
+    enter: ({ parent } = {}) => {
+      const id = bootstrap.getRandomNumber().toString().slice(2)
+      blocks.push({ id, parent: parent || blocks.at(-1), names: {} })
+    },
+    add: (nameString, value) => {
+      const currentBlock = blocks.at(-1)
+      currentBlock.names[nameString] = value
+    },
+    get: nameString => {
+      let block = blocks.at(-1)
+      while (block) {
+        const result = block.names[nameString]
+        if (result) return result
+        block = block.parent
+      }
+    },
+    closure: () => {
+      return blocks.at(-1)
+    },
+    exit: () => {
+      blocks.pop()
+    },
+  }
+}
+
+const createControlFlow = () => {
+  let isReturning = false
+
+  return {
+    getIsReturning: () => isReturning,
+    triggerReturn: () => {
+      isReturning = true
+    },
+    completeReturn: () => {
+      isReturning = false
+    },
+  }
+}
 
 const getBaseFields = memoryObject => {
   if (memoryObject.getStorageType() === "number") {
@@ -42,4 +90,4 @@ const getBaseFields = memoryObject => {
   throw new Error("Not implemented")
 }
 
-module.exports = { getBaseFields }
+module.exports = { createScope, createControlFlow, getBaseFields }

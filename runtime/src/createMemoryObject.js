@@ -1,5 +1,3 @@
-// Not used yet
-
 const valuesSymbol = Symbol("values")
 
 const createMemoryObject = () => {

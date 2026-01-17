@@ -67,7 +67,7 @@ log = (...values<[Any]>)<null> => {
     }
   }
   
-  await js`console.log("{.string(finalString)}")`
+  bootstrap.log(finalString)
 }
 
 addToScope(log:)

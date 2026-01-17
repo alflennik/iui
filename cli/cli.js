@@ -23,7 +23,7 @@ const processFile = async () => {
 
   // TODO: make this less awkward
   const compile = require("../compiler/compiler")
-  const { execute } = require("../interpreter/core")
+  const execute = require("../interpreter/interpreter")
   const path = require("node:path")
   const fs = require("node:fs/promises")
 
