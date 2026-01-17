@@ -1,5 +1,5 @@
-import { fpFromDecimal } from "@hastom/fixed-point"
-import { extraDigitsOfHiddenPrecision, internalPrecision, officialPrecision } from "./bootstrap.js"
+const { fpFromDecimal, extraDigitsOfHiddenPrecision, internalPrecision, officialPrecision } =
+  runtime
 
 const getBaseFields = memoryObject => {
   if (memoryObject.getStorageType() === "number") {
@@ -42,4 +42,4 @@ const getBaseFields = memoryObject => {
   throw new Error("Not implemented")
 }
 
-export default getBaseFields
+module.exports = { getBaseFields }

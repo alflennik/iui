@@ -76,7 +76,10 @@ const bootstrap = {
           return execute(elseIfNodes[i][2])
         }
       } else if (elseIfNodes[i][0] === "then") {
-        return execute(elseIfNodes[i][2])
+        return execute(elseIfNodes[i][1])
+      } else if (elseIfNodes[i][0] === "else") {
+        if (elseIfNodes[i][1][0] !== "statements") throw new Error("Syntax error")
+        return execute(elseIfNodes[i][1])
       } else {
         throw new Error("Syntax error")
       }

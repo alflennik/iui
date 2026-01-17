@@ -1,5 +1,6 @@
-import getBaseFields from "./baseFields.js"
-import bootstrap from "./bootstrap.js"
+const { getBaseFields } = require("./coreLibrary.js")
+
+const { bootstrap } = runtime
 
 const log = args => {
   const memoryObject = args.positional[0]
@@ -7,6 +8,6 @@ const log = args => {
   bootstrap.log(baseFields.toString())
 }
 
-export default {
+module.exports = {
   log,
 }
