@@ -67,7 +67,9 @@ log = (...values<[Any]>)<null> => {
     }
   }
   
-  bootstrap.log(finalString)
+  js.run(*(
+    console.log(*{finalString})
+  ))
 }
 
 addToScope(log:)

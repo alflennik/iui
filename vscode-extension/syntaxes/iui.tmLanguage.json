@@ -30,8 +30,11 @@
     "general": {
       "patterns": [
         {
+          "include": "#embeddedLanguages"
+        },
+        {
           "name": "keyword.control.iui",
-          "match": "(?<![.a-zA-Z0-9])(if|else|while|for|catch|await|continue|break|export|throw)\\b"
+          "match": "(?<![.a-zA-Z0-9])(if|else|while|for|catch|await|continue|break|breaking|export|throw)\\b"
         },
         {
           "name": "keyword.control.iui",
@@ -43,7 +46,7 @@
         },
         {
           "name": "support.constant.iui",
-          "match": "(true|false|null)"
+          "match": "(?<![.a-zA-Z0-9])(true|false|null)"
         },
         {
           "include": "#comments"
@@ -88,10 +91,6 @@
           "match": "(?<=\\.)[a-z][a-zA-Z0-9]*"
         },
         {
-          "name": "variable.other.iui",
-          "match": "[a-z][a-zA-Z0-9]*(?=\\??:)"
-        },
-        {
           "name": "entity.name.function.iui",
           "match": "&?[a-z][a-zA-Z0-9]*(?=\\s+=\\s+\\()"
         },
@@ -100,12 +99,24 @@
           "match": "&?[a-z][a-zA-Z0-9]*(?=\\s+=\\s+&?[a-z][a-zA-Z0-9]*\\s+=>)"
         },
         {
+          "name": "entity.name.function.iui",
+          "match": "&?[a-z][a-zA-Z0-9]*(?=\\s*:\\s+\\()"
+        },
+        {
+          "name": "variable.other.iui",
+          "match": "[a-z][a-zA-Z0-9]*(?=\\??:)"
+        },
+        {
           "name": "variable.other.object.js.iui",
           "match": "&?[a-z][a-zA-Z0-9]*"
         },
         {
           "name": "entity.name.type.iui",
           "match": "&?[A-Z][a-zA-Z0-9]*"
+        },
+        {
+          "name": "variable.other.object.js.iui",
+          "match": "\\."
         }
       ]
     },
@@ -271,6 +282,49 @@
                   "include": "#general"
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    "embeddedLanguagesInner": {
+      "patterns": [
+        {
+          "begin": "\\(",
+          "end": "\\)",
+          "name": "meta.unknown-language",
+          "patterns": [
+            {
+              "include": "#embeddedLanguagesInner"
+            }
+          ]
+        },
+        {
+          "begin": "\\*{",
+          "end": "}",
+          "patterns": [
+            {
+              "include": "#general"
+            }
+          ]
+        }
+      ]
+    },
+    "embeddedLanguages": {
+      "patterns": [
+        {
+          "begin": "(\\*\\()",
+          "beginCaptures": {
+            "0": "constant.character.escape.iui"
+          },
+          "end": "(\\))",
+          "endCaptures": {
+            "0": "constant.character.escape.iui"
+          },
+          "contentName": "meta.unknown-language",
+          "patterns": [
+            {
+              "include": "#embeddedLanguagesInner"
             }
           ]
         }

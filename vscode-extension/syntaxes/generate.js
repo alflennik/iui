@@ -11,10 +11,11 @@ const generate = async () => {
     repository: {
       general: {
         patterns: [
+          { include: "#embeddedLanguages" },
           {
             name: "keyword.control.iui",
             match:
-              "(?<![.a-zA-Z0-9])(if|else|while|for|catch|await|continue|break|export|throw)\\b",
+              "(?<![.a-zA-Z0-9])(if|else|while|for|catch|await|continue|break|breaking|export|throw)\\b",
           },
           {
             name: "keyword.control.iui",
@@ -27,7 +28,7 @@ const generate = async () => {
           },
           {
             name: "support.constant.iui",
-            match: "(true|false|null)",
+            match: "(?<![.a-zA-Z0-9])(true|false|null)",
           },
           { include: "#comments" },
           { include: "#strings" },
@@ -70,10 +71,6 @@ const generate = async () => {
             match: "(?<=\\.)[a-z][a-zA-Z0-9]*",
           },
           {
-            name: "variable.other.iui",
-            match: "[a-z][a-zA-Z0-9]*(?=\\??:)",
-          },
-          {
             // Select this:
             // myVariable = (
             // With the idea that what follows is probably a function
@@ -87,12 +84,26 @@ const generate = async () => {
             match: "&?[a-z][a-zA-Z0-9]*(?=\\s+=\\s+&?[a-z][a-zA-Z0-9]*\\s+=>)",
           },
           {
+            // name: (
+            // What follows is probably a function
+            name: "entity.name.function.iui",
+            match: "&?[a-z][a-zA-Z0-9]*(?=\\s*:\\s+\\()",
+          },
+          {
+            name: "variable.other.iui",
+            match: "[a-z][a-zA-Z0-9]*(?=\\??:)",
+          },
+          {
             name: "variable.other.object.js.iui",
             match: "&?[a-z][a-zA-Z0-9]*",
           },
           {
             name: "entity.name.type.iui",
             match: "&?[A-Z][a-zA-Z0-9]*",
+          },
+          {
+            name: "variable.other.object.js.iui", // make white
+            match: "\\.",
           },
         ],
       },
@@ -134,6 +145,38 @@ const generate = async () => {
             }
           })
         })(),
+      },
+      embeddedLanguagesInner: {
+        patterns: [
+          {
+            begin: "\\(",
+            end: "\\)",
+            name: "meta.unknown-language",
+            patterns: [{ include: "#embeddedLanguagesInner" }],
+          },
+          {
+            // name: "keyword.operator.placeholder.iui",
+            begin: `\\*{`,
+            end: "}",
+            patterns: [{ include: "#general" }],
+          },
+        ],
+      },
+      embeddedLanguages: {
+        patterns: [
+          {
+            begin: "(\\*\\()",
+            beginCaptures: {
+              0: "constant.character.escape.iui",
+            },
+            end: "(\\))",
+            endCaptures: {
+              0: "constant.character.escape.iui",
+            },
+            contentName: "meta.unknown-language",
+            patterns: [{ include: "#embeddedLanguagesInner" }],
+          },
+        ],
       },
     },
     scopeName: "source.iui",
