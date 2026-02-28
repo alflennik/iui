@@ -4,7 +4,7 @@
   "publisher": "iui",
   "repository": "https://github.com/alflennik/iui",
   "description": "Syntax highlighting for the iui programming language as well as file icons and code folding support.",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "engines": {
     "vscode": "^1.99.3"
   },
