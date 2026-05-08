@@ -4,6 +4,9 @@ const path = require("path")
 const fs = require("fs/promises")
 
 const generate = async () => {
+  const startBoundary = "((?<=\\s)|^)"
+  const endBoundary = "(?=\\s)"
+
   let output = {
     $schema: "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
     name: "iui",
@@ -27,8 +30,16 @@ const generate = async () => {
             match: "[0-9_]",
           },
           {
-            name: "support.constant.iui",
+            name: "punctuation.terminator.statement.iui",
+            match: ";",
+          },
+          {
+            name: "support.constant.iui constant.language.boolean.iui",
             match: "(?<![.a-zA-Z0-9])(true|false|null)",
+          },
+          {
+            name: "support.constant.iui constant.language.null.iui",
+            match: "(?<![.a-zA-Z0-9])null",
           },
           { include: "#comments" },
           { include: "#strings" },
@@ -37,7 +48,7 @@ const generate = async () => {
             match: "(try\\?|try!|(?<!\\.)try)",
           },
           {
-            name: "support.constant.iui",
+            name: "constant.character.escape.iui",
             match: "<!>",
           },
           {
@@ -49,10 +60,12 @@ const generate = async () => {
             match: "(\\**{|})",
           },
           {
-            // Couldn't find another way to get teal colors
-            name: "constant.character.escape.iui",
-            match:
-              "(?<=\\s)(=|\\+=|-=|\\*=|\\/=|==|!=|&&|>|<|<=|>=|\\|\\||-|\\+|\\*|\\/|\\?|:)(?=\\s)",
+            name: "support.function.iui",
+            match: `${startBoundary}(=|\\+=|-=|\\*=|\\/=|==|!=|&&|>|<|<=|>=|\\|\\||-|\\+|\\*|\\/|\\?|:)${endBoundary}`,
+          },
+          {
+            name: "keyword.control.iui",
+            match: `(\\[|\\]|\\||\\(|\\))`,
           },
           {
             name: "keyword.control.iui",
@@ -67,8 +80,17 @@ const generate = async () => {
             match: "[a-z][a-zA-Z0-9]*(?=\\()",
           },
           {
-            name: "variable.other.property.iui",
+            // .value
+            name: "support.variable.iui",
             match: "(?<=\\.)[a-z][a-zA-Z0-9]*",
+          },
+          {
+            name: "support.function.iui",
+            match: `${startBoundary}(:::|!)`,
+          },
+          {
+            name: "support.function.iui",
+            match: `:`,
           },
           {
             // Select this:
@@ -90,20 +112,31 @@ const generate = async () => {
             match: "&?[a-z][a-zA-Z0-9]*(?=\\s*:\\s+\\()",
           },
           {
-            name: "variable.other.iui",
-            match: "[a-z][a-zA-Z0-9]*(?=\\??:)",
+            // key:
+            name: "support.variable.iui",
+            match: "[a-z][a-zA-Z0-9]*(?=:)",
           },
           {
-            name: "variable.other.object.js.iui",
-            match: "&?[a-z][a-zA-Z0-9]*",
+            // myVariable
+            name: "support.variable.iui",
+            match: `(?<!&)[a-z][a-zA-Z0-9]*`,
+          },
+          {
+            // &mutableVariable
+            name: "variable.other.readwrite.iui",
+            match: "&[a-z][a-zA-Z0-9]*",
           },
           {
             name: "entity.name.type.iui",
             match: "&?[A-Z][a-zA-Z0-9]*",
           },
           {
-            name: "variable.other.object.js.iui", // make white
+            name: "support.function.iui",
             match: "\\.",
+          },
+          {
+            name: "punctuation.separator.comma.iui",
+            match: "\\,",
           },
         ],
       },
@@ -136,9 +169,19 @@ const generate = async () => {
                   match: `\\\\${asterisksEscaped} *$`,
                 },
                 {
-                  name: "keyword.operator.placeholder.iui",
-                  begin: `${asterisksEscaped}{`,
-                  end: "}",
+                  begin: `(${asterisksEscaped}{)`,
+                  beginCaptures: {
+                    1: {
+                      name: "keyword.operator.placeholder.iui",
+                    },
+                  },
+                  end: "(})",
+                  endCaptures: {
+                    1: {
+                      name: "keyword.operator.placeholder.iui",
+                    },
+                  },
+                  name: "source.iui",
                   patterns: [{ include: "#general" }],
                 },
               ],

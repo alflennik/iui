@@ -45,8 +45,16 @@
           "match": "[0-9_]"
         },
         {
-          "name": "support.constant.iui",
+          "name": "punctuation.terminator.statement.iui",
+          "match": ";"
+        },
+        {
+          "name": "support.constant.iui constant.language.boolean.iui",
           "match": "(?<![.a-zA-Z0-9])(true|false|null)"
+        },
+        {
+          "name": "support.constant.iui constant.language.null.iui",
+          "match": "(?<![.a-zA-Z0-9])null"
         },
         {
           "include": "#comments"
@@ -59,7 +67,7 @@
           "match": "(try\\?|try!|(?<!\\.)try)"
         },
         {
-          "name": "support.constant.iui",
+          "name": "constant.character.escape.iui",
           "match": "<!>"
         },
         {
@@ -71,8 +79,12 @@
           "match": "(\\**{|})"
         },
         {
-          "name": "constant.character.escape.iui",
-          "match": "(?<=\\s)(=|\\+=|-=|\\*=|\\/=|==|!=|&&|>|<|<=|>=|\\|\\||-|\\+|\\*|\\/|\\?|:)(?=\\s)"
+          "name": "support.function.iui",
+          "match": "((?<=\\s)|^)(=|\\+=|-=|\\*=|\\/=|==|!=|&&|>|<|<=|>=|\\|\\||-|\\+|\\*|\\/|\\?|:)(?=\\s)"
+        },
+        {
+          "name": "keyword.control.iui",
+          "match": "(\\[|\\]|\\||\\(|\\))"
         },
         {
           "name": "keyword.control.iui",
@@ -87,8 +99,16 @@
           "match": "[a-z][a-zA-Z0-9]*(?=\\()"
         },
         {
-          "name": "variable.other.property.iui",
+          "name": "support.variable.iui",
           "match": "(?<=\\.)[a-z][a-zA-Z0-9]*"
+        },
+        {
+          "name": "support.function.iui",
+          "match": "((?<=\\s)|^)(:::|!)"
+        },
+        {
+          "name": "support.function.iui",
+          "match": ":"
         },
         {
           "name": "entity.name.function.iui",
@@ -103,20 +123,28 @@
           "match": "&?[a-z][a-zA-Z0-9]*(?=\\s*:\\s+\\()"
         },
         {
-          "name": "variable.other.iui",
-          "match": "[a-z][a-zA-Z0-9]*(?=\\??:)"
+          "name": "support.variable.iui",
+          "match": "[a-z][a-zA-Z0-9]*(?=:)"
         },
         {
-          "name": "variable.other.object.js.iui",
-          "match": "&?[a-z][a-zA-Z0-9]*"
+          "name": "support.variable.iui",
+          "match": "(?<!&)[a-z][a-zA-Z0-9]*"
+        },
+        {
+          "name": "variable.other.readwrite.iui",
+          "match": "&[a-z][a-zA-Z0-9]*"
         },
         {
           "name": "entity.name.type.iui",
           "match": "&?[A-Z][a-zA-Z0-9]*"
         },
         {
-          "name": "variable.other.object.js.iui",
+          "name": "support.function.iui",
           "match": "\\."
+        },
+        {
+          "name": "punctuation.separator.comma.iui",
+          "match": "\\,"
         }
       ]
     },
@@ -149,9 +177,19 @@
               "match": "\\\\\\*\\*\\*\\*\\* *$"
             },
             {
-              "name": "keyword.operator.placeholder.iui",
-              "begin": "\\*\\*\\*\\*\\*{",
-              "end": "}",
+              "begin": "(\\*\\*\\*\\*\\*{)",
+              "beginCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "end": "(})",
+              "endCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "name": "source.iui",
               "patterns": [
                 {
                   "include": "#general"
@@ -174,9 +212,19 @@
               "match": "\\\\\\*\\*\\*\\* *$"
             },
             {
-              "name": "keyword.operator.placeholder.iui",
-              "begin": "\\*\\*\\*\\*{",
-              "end": "}",
+              "begin": "(\\*\\*\\*\\*{)",
+              "beginCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "end": "(})",
+              "endCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "name": "source.iui",
               "patterns": [
                 {
                   "include": "#general"
@@ -199,9 +247,19 @@
               "match": "\\\\\\*\\*\\* *$"
             },
             {
-              "name": "keyword.operator.placeholder.iui",
-              "begin": "\\*\\*\\*{",
-              "end": "}",
+              "begin": "(\\*\\*\\*{)",
+              "beginCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "end": "(})",
+              "endCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "name": "source.iui",
               "patterns": [
                 {
                   "include": "#general"
@@ -224,9 +282,19 @@
               "match": "\\\\\\*\\* *$"
             },
             {
-              "name": "keyword.operator.placeholder.iui",
-              "begin": "\\*\\*{",
-              "end": "}",
+              "begin": "(\\*\\*{)",
+              "beginCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "end": "(})",
+              "endCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "name": "source.iui",
               "patterns": [
                 {
                   "include": "#general"
@@ -249,9 +317,19 @@
               "match": "\\\\\\* *$"
             },
             {
-              "name": "keyword.operator.placeholder.iui",
-              "begin": "\\*{",
-              "end": "}",
+              "begin": "(\\*{)",
+              "beginCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "end": "(})",
+              "endCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "name": "source.iui",
               "patterns": [
                 {
                   "include": "#general"
@@ -274,9 +352,19 @@
               "match": "\\\\ *$"
             },
             {
-              "name": "keyword.operator.placeholder.iui",
-              "begin": "{",
-              "end": "}",
+              "begin": "({)",
+              "beginCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "end": "(})",
+              "endCaptures": {
+                "1": {
+                  "name": "keyword.operator.placeholder.iui"
+                }
+              },
+              "name": "source.iui",
               "patterns": [
                 {
                   "include": "#general"
