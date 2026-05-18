@@ -1,0 +1,9 @@
+{
+  "name": "lsp-server",
+  "version": "0.0.0",
+  "dependencies": {
+    "lsp-syntax-highlighter": "^1.0.4",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  }
+}
