@@ -1,1 +1,1 @@
-This extension adds syntax highlighting for the iui programming language as well as file icons and code folding support.
+This extension adds syntax highlighting for the iui programming language, a basic language server, as well as file icons and code folding support.

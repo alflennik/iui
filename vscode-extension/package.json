@@ -15,7 +15,7 @@
   "activationEvents": [
     "onLanguage"
   ],
-  "main": "./client/extension",
+  "main": "./lsp-client/extension",
   "icon": "./iui-logo.png",
   "contributes": {
     "languages": [
@@ -49,7 +49,7 @@
     }]
   },
   "scripts": {
-    "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
-    "refresh-highlighter": "npx lsp-syntax-highlighter-compiler --package-json=./package.json --grammar=html --grammar=json --grammar=css --grammar=javascript --database-file=./server/grammars/highlighterDatabase.json"
+    "postinstall": "cd lsp-client && npm install && cd ../lsp-server && npm install && cd ..",
+    "refresh-highlighter": "npx lsp-syntax-highlighter-compiler --package-json=./package.json --grammar=html --grammar=json --grammar=css --grammar=javascript --database-file=./lsp-server/grammars/highlighterDatabase.json"
   }
 }

@@ -4,7 +4,7 @@ const { LanguageClient, TransportKind } = require('vscode-languageclient/node')
 let client
 
 const activate = context => {
-  const serverModule = context.asAbsolutePath(path.join('server', 'server.js'))
+  const serverModule = context.asAbsolutePath(path.join('lsp-server', 'server.js'))
 
   // If the extension is launched in debug mode then the debug server options are used
   // Otherwise the run options are used
@@ -22,12 +22,7 @@ const activate = context => {
     ],
   }
 
-  client = new LanguageClient(
-    'REPLACE_ME language-server-id',
-    'REPLACE_ME language server name',
-    serverOptions,
-    clientOptions,
-  )
+  client = new LanguageClient('iui-server', 'iui Language Server', serverOptions, clientOptions)
 
   client.start() // This will also launch the server
 }

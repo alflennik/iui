@@ -8,7 +8,7 @@
 			"name": "Extension",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
-			"outFiles": ["${workspaceRoot}/client/**/*.js"],
+			"outFiles": ["${workspaceRoot}/lsp-client/**/*.js"],
       "autoAttachChildProcesses": true,
 		}
 	]
