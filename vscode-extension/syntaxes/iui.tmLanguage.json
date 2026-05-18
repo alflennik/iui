@@ -34,15 +34,15 @@
         },
         {
           "name": "keyword.control.iui",
-          "match": "(?<![.a-zA-Z0-9])(if|else|while|for|catch|await|continue|break|breaking|export|throw)\\b"
+          "match": "(?<![.a-zA-Z0-9])(if|else|while|for|catch|await|continue|break|export|throw|try|action|register|watch)(?![a-zA-Z0-9])"
         },
         {
           "name": "keyword.control.iui",
-          "match": "(?<![.a-zA-Z0-9])(\\*\\*\\*\\*\\*return|\\*\\*\\*\\*return|\\*\\*\\*return|\\*\\*return|\\*return|return)"
+          "match": "(?<![.a-zA-Z0-9])(\\*\\*\\*\\*\\*return|\\*\\*\\*\\*return|\\*\\*\\*return|\\*\\*return|\\*return|return)(?![a-zA-Z0-9])"
         },
         {
           "name": "constant.numeric.iui",
-          "match": "[0-9_]"
+          "match": "(?<![.a-zA-Z0-9])[0-9][0-9_]*\\.?[0-9_]*"
         },
         {
           "name": "punctuation.terminator.statement.iui",
@@ -50,21 +50,17 @@
         },
         {
           "name": "support.constant.iui constant.language.boolean.iui",
-          "match": "(?<![.a-zA-Z0-9])(true|false|null)"
+          "match": "(?<![.a-zA-Z0-9])(true|false|null)(?![a-zA-Z0-9])"
         },
         {
           "name": "support.constant.iui constant.language.null.iui",
-          "match": "(?<![.a-zA-Z0-9])null"
+          "match": "(?<![.a-zA-Z0-9])null(?![a-zA-Z0-9])"
         },
         {
           "include": "#comments"
         },
         {
           "include": "#strings"
-        },
-        {
-          "name": "keyword.control.iui",
-          "match": "(try\\?|try!|(?<!\\.)try)"
         },
         {
           "name": "constant.character.escape.iui",
@@ -95,16 +91,20 @@
           "match": "@[a-z][a-zA-Z0-9]*"
         },
         {
+          "name": "support.function.iui",
+          "match": "((?<=\\s)|^)\\.\\.\\.:"
+        },
+        {
+          "name": "variable.other.readwrite.iui",
+          "match": "\\.:&?([a-zA-Z][a-zA-Z0-9]*)?"
+        },
+        {
           "name": "entity.name.function.iui",
           "match": "[a-z][a-zA-Z0-9]*(?=\\()"
         },
         {
-          "name": "support.variable.iui",
-          "match": "(?<=\\.)[a-z][a-zA-Z0-9]*"
-        },
-        {
           "name": "support.function.iui",
-          "match": "((?<=\\s)|^)(:::|!)"
+          "match": "((?<=\\s)|^)!"
         },
         {
           "name": "support.function.iui",
@@ -125,6 +125,10 @@
         {
           "name": "support.variable.iui",
           "match": "[a-z][a-zA-Z0-9]*(?=:)"
+        },
+        {
+          "name": "support.variable.iui",
+          "match": "(?<=\\.)[a-z][a-zA-Z0-9]*"
         },
         {
           "name": "support.variable.iui",

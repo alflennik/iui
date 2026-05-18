@@ -7,6 +7,9 @@ const generate = async () => {
   const startBoundary = "((?<=\\s)|^)"
   const endBoundary = "(?=\\s)"
 
+  const notPrecededByName = "(?<![.a-zA-Z0-9])"
+  const notFollowedByName = "(?![a-zA-Z0-9])"
+
   let output = {
     $schema: "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
     name: "iui",
@@ -17,17 +20,15 @@ const generate = async () => {
           { include: "#embeddedLanguages" },
           {
             name: "keyword.control.iui",
-            match:
-              "(?<![.a-zA-Z0-9])(if|else|while|for|catch|await|continue|break|breaking|export|throw)\\b",
+            match: `${notPrecededByName}(if|else|while|for|catch|await|continue|break|export|throw|try|action|register|watch)${notFollowedByName}`,
           },
           {
             name: "keyword.control.iui",
-            match:
-              "(?<![.a-zA-Z0-9])(\\*\\*\\*\\*\\*return|\\*\\*\\*\\*return|\\*\\*\\*return|\\*\\*return|\\*return|return)",
+            match: `${notPrecededByName}(\\*\\*\\*\\*\\*return|\\*\\*\\*\\*return|\\*\\*\\*return|\\*\\*return|\\*return|return)${notFollowedByName}`,
           },
           {
             name: "constant.numeric.iui",
-            match: "[0-9_]",
+            match: `${notPrecededByName}[0-9][0-9_]*\\.?[0-9_]*`,
           },
           {
             name: "punctuation.terminator.statement.iui",
@@ -35,18 +36,14 @@ const generate = async () => {
           },
           {
             name: "support.constant.iui constant.language.boolean.iui",
-            match: "(?<![.a-zA-Z0-9])(true|false|null)",
+            match: `${notPrecededByName}(true|false|null)${notFollowedByName}`,
           },
           {
             name: "support.constant.iui constant.language.null.iui",
-            match: "(?<![.a-zA-Z0-9])null",
+            match: `${notPrecededByName}null${notFollowedByName}`,
           },
           { include: "#comments" },
           { include: "#strings" },
-          {
-            name: "keyword.control.iui",
-            match: "(try\\?|try!|(?<!\\.)try)",
-          },
           {
             name: "constant.character.escape.iui",
             match: "<!>",
@@ -76,17 +73,21 @@ const generate = async () => {
             match: "@[a-z][a-zA-Z0-9]*",
           },
           {
+            name: "support.function.iui",
+            match: `${startBoundary}\\.\\.\\.:`,
+          },
+          {
+            // .:time
+            name: "variable.other.readwrite.iui",
+            match: `\\.:&?([a-zA-Z][a-zA-Z0-9]*)?`,
+          },
+          {
             name: "entity.name.function.iui",
             match: "[a-z][a-zA-Z0-9]*(?=\\()",
           },
           {
-            // .value
-            name: "support.variable.iui",
-            match: "(?<=\\.)[a-z][a-zA-Z0-9]*",
-          },
-          {
             name: "support.function.iui",
-            match: `${startBoundary}(:::|!)`,
+            match: `${startBoundary}!`,
           },
           {
             name: "support.function.iui",
@@ -115,6 +116,11 @@ const generate = async () => {
             // key:
             name: "support.variable.iui",
             match: "[a-z][a-zA-Z0-9]*(?=:)",
+          },
+          {
+            // .value
+            name: "support.variable.iui",
+            match: "(?<=\\.)[a-z][a-zA-Z0-9]*",
           },
           {
             // myVariable
